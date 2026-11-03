@@ -1,0 +1,2552 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FLYING WORDS ADVENTURE: CATCH AND BUILD!</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Google Fonts: Fredoka & Nunito for kid-friendly Smart Board readability -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --sky-top: #0284c7;
+            --sky-mid: #38bdf8;
+            --sky-bottom: #e0f2fe;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-bottom) 100%);
+            min-height: 100vh;
+            width: 100vw;
+            overflow-x: hidden;
+            overflow-y: auto;
+            touch-action: manipulation;
+        }
+
+        /* On standard landscape screens (Smart Board / Laptop), lock to full viewport without scroll */
+        @media (min-width: 1024px) and (min-height: 600px) {
+            body {
+                height: 100vh;
+                overflow: hidden;
+            }
+        }
+
+        .font-title {
+            font-family: 'Fredoka', sans-serif;
+            letter-spacing: 0.02em;
+        }
+
+        .text-outline {
+            text-shadow: 
+                0 3px 0 rgba(0, 0, 0, 0.22),
+                0 6px 14px rgba(0, 0, 0, 0.18);
+        }
+
+        .text-outline-white {
+            text-shadow:
+                -2px -2px 0 #ffffff,
+                 2px -2px 0 #ffffff,
+                -2px  2px 0 #ffffff,
+                 2px  2px 0 #ffffff,
+                 0px  4px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Floating Cloud & Island Animations */
+        @keyframes floatCloudSlow {
+            0% { transform: translateX(-12vw); }
+            100% { transform: translateX(112vw); }
+        }
+
+        @keyframes bobIsland {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+        }
+
+        /* Wing Flapping Animation ( ONLY active when word is flying in the sky ) */
+        @keyframes flapLeftWing {
+            0%, 100% { transform: rotate(-18deg) scaleY(1); }
+            50% { transform: rotate(28deg) scaleY(0.82); }
+        }
+
+        @keyframes flapRightWing {
+            0%, 100% { transform: rotate(18deg) scaleY(1); }
+            50% { transform: rotate(-28deg) scaleY(0.82); }
+        }
+
+        .wing-left {
+            transform-origin: right center;
+            animation: flapLeftWing 0.18s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .wing-right {
+            transform-origin: left center;
+            animation: flapRightWing 0.18s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .cloud-drift-1 {
+            animation: floatCloudSlow 55s linear infinite;
+        }
+        .cloud-drift-2 {
+            animation: floatCloudSlow 72s linear infinite;
+            animation-delay: -28s;
+        }
+        .cloud-drift-3 {
+            animation: floatCloudSlow 64s linear infinite;
+            animation-delay: -14s;
+        }
+
+        .island-bob-1 {
+            animation: bobIsland 5s ease-in-out infinite;
+        }
+        .island-bob-2 {
+            animation: bobIsland 6.5s ease-in-out infinite;
+            animation-delay: -2.5s;
+        }
+
+        /* Game 3D Button Styling */
+        .btn-game {
+            transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease, filter 0.12s ease;
+            cursor: pointer;
+        }
+        .btn-game:hover:not(:disabled) {
+            filter: brightness(1.06);
+            transform: translateY(-2px);
+        }
+        .btn-game:active:not(:disabled) {
+            transform: translateY(3px);
+        }
+        .btn-game:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        /* Flying Word Entity inside Sky Arena */
+        .flying-word-node {
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: none;
+            will-change: transform;
+            z-index: 20;
+            transition: opacity 0.15s ease;
+        }
+
+        .flying-word-node:hover .word-pill-sky {
+            transform: scale(1.07);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25), 0 0 0 4px rgba(255, 255, 255, 0.9);
+        }
+
+        .flying-word-node:active .word-pill-sky {
+            transform: scale(0.95);
+        }
+
+        .word-pill-sky {
+            transition: transform 0.12s ease, box-shadow 0.12s ease;
+            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.22), 0 8px 16px rgba(0, 0, 0, 0.18);
+        }
+
+        /* Static Word Card inside Sentence Builder Box (NO WINGS, NO MOVEMENT) */
+        .static-sentence-card {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            touch-action: none;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+            box-shadow: 0 5px 0 #cbd5e1, 0 6px 12px rgba(15, 23, 42, 0.12);
+            animation: none !important;
+            transform: none;
+        }
+
+        .static-sentence-card:active {
+            cursor: grabbing;
+        }
+
+        .static-sentence-card.selected-card {
+            border-color: #f97316 !important;
+            background-color: #fff7ed !important;
+            box-shadow: 0 5px 0 #ea580c, 0 0 0 4px rgba(249, 115, 22, 0.35) !important;
+            transform: translateY(-3px);
+        }
+
+        .static-sentence-card.dragging-source {
+            opacity: 0.35;
+            border-style: dashed !important;
+        }
+
+        .static-sentence-card.drag-over-target {
+            border-color: #0284c7 !important;
+            box-shadow: 0 5px 0 #0284c7, 0 0 0 5px rgba(56, 189, 248, 0.5) !important;
+            transform: scale(1.05);
+        }
+
+        /* Floating Drag Clone for Smooth Touch/Mouse Reordering */
+        #drag-ghost-card {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%) scale(1.08) rotate(-2deg);
+            box-shadow: 0 16px 30px rgba(15, 23, 42, 0.32), 0 0 0 4px #38bdf8;
+        }
+
+        /* Star Pop Animation */
+        @keyframes starPop {
+            0% { transform: scale(0) rotate(-35deg); opacity: 0; }
+            70% { transform: scale(1.2) rotate(10deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        .star-pop-1 { animation: starPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .star-pop-2 { animation: starPop 0.45s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; opacity: 0; }
+        .star-pop-3 { animation: starPop 0.45s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; opacity: 0; }
+
+        /* Gentle Shake Animation for Wrong Answer */
+        @keyframes gentleShake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .shake-box {
+            animation: gentleShake 0.4s ease-in-out;
+        }
+    </style>
+</head>
+<body class="relative select-none text-slate-800">
+
+    <!-- BACKGROUND DECORATION LAYER -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <!-- Decorative Rainbow Arc -->
+        <svg class="absolute -top-10 -right-16 w-[420px] h-[260px] opacity-55" viewBox="0 0 400 220" fill="none">
+            <path d="M20 220 A180 180 0 0 1 380 220" stroke="#ef4444" stroke-width="14" stroke-linecap="round"/>
+            <path d="M34 220 A166 166 0 0 1 366 220" stroke="#f97316" stroke-width="14" stroke-linecap="round"/>
+            <path d="M48 220 A152 152 0 0 1 352 220" stroke="#eab308" stroke-width="14" stroke-linecap="round"/>
+            <path d="M62 220 A138 138 0 0 1 338 220" stroke="#22c55e" stroke-width="14" stroke-linecap="round"/>
+            <path d="M76 220 A124 124 0 0 1 324 220" stroke="#3b82f6" stroke-width="14" stroke-linecap="round"/>
+            <path d="M90 220 A110 110 0 0 1 310 220" stroke="#a855f7" stroke-width="14" stroke-linecap="round"/>
+        </svg>
+
+        <!-- Glowing Sun & Sparkle Stars -->
+        <div class="absolute top-6 left-10 w-20 h-20 rounded-full bg-yellow-300 opacity-80 blur-[2px] shadow-[0_0_50px_#fde047]"></div>
+        <svg class="absolute top-12 left-1/3 w-7 h-7 text-yellow-200 opacity-80" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L14.8 8.8L22 9.5L16.5 14.2L18.2 21.2L12 17.5L5.8 21.2L7.5 14.2L2 9.5L9.2 8.8L12 2Z"/>
+        </svg>
+        <svg class="absolute top-24 right-1/3 w-5 h-5 text-yellow-100 opacity-75" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L14.8 8.8L22 9.5L16.5 14.2L18.2 21.2L12 17.5L5.8 21.2L7.5 14.2L2 9.5L9.2 8.8L12 2Z"/>
+        </svg>
+
+        <!-- Animated Drifting Clouds -->
+        <div class="cloud-drift-1 absolute top-10 left-0 opacity-85">
+            <svg width="160" height="75" viewBox="0 0 160 75" fill="white">
+                <circle cx="50" cy="45" r="25"/>
+                <circle cx="80" cy="32" r="30"/>
+                <circle cx="115" cy="45" r="24"/>
+                <rect x="45" y="42" width="75" height="28" rx="14"/>
+            </svg>
+        </div>
+        <div class="cloud-drift-2 absolute top-32 left-0 opacity-70">
+            <svg width="130" height="60" viewBox="0 0 160 75" fill="white">
+                <circle cx="50" cy="45" r="25"/>
+                <circle cx="80" cy="32" r="30"/>
+                <circle cx="115" cy="45" r="24"/>
+                <rect x="45" y="42" width="75" height="28" rx="14"/>
+            </svg>
+        </div>
+        <div class="cloud-drift-3 absolute top-56 left-0 opacity-60">
+            <svg width="180" height="82" viewBox="0 0 160 75" fill="white">
+                <circle cx="50" cy="45" r="25"/>
+                <circle cx="80" cy="32" r="30"/>
+                <circle cx="115" cy="45" r="24"/>
+                <rect x="45" y="42" width="75" height="28" rx="14"/>
+            </svg>
+        </div>
+
+        <!-- Floating Sky Islands -->
+        <div class="island-bob-1 absolute bottom-28 left-6 hidden xl:block opacity-90">
+            <svg width="150" height="110" viewBox="0 0 150 110" fill="none">
+                <!-- Tree on island -->
+                <rect x="68" y="22" width="10" height="24" rx="4" fill="#92400e"/>
+                <circle cx="73" cy="18" r="16" fill="#16a34a"/>
+                <circle cx="62" cy="24" r="12" fill="#22c55e"/>
+                <circle cx="84" cy="24" r="12" fill="#15803d"/>
+                <!-- Rock base -->
+                <path d="M20 48 L130 48 L105 92 L75 106 L42 90 Z" fill="#b45309"/>
+                <path d="M42 90 L75 106 L75 48 L20 48 Z" fill="#92400e" opacity="0.4"/>
+                <!-- Green grass top -->
+                <rect x="14" y="38" width="122" height="18" rx="9" fill="#22c55e"/>
+                <path d="M25 54 Q32 65 40 54 Q55 68 68 54 Q85 66 98 54 Q112 64 125 54" fill="#22c55e"/>
+            </svg>
+        </div>
+
+        <div class="island-bob-2 absolute top-44 right-6 hidden xl:block opacity-85">
+            <svg width="130" height="95" viewBox="0 0 150 110" fill="none">
+                <path d="M25 48 L125 48 L100 88 L75 100 L48 86 Z" fill="#b45309"/>
+                <rect x="18" y="38" width="114" height="16" rx="8" fill="#4ade80"/>
+                <circle cx="55" cy="34" r="7" fill="#facc15"/>
+                <circle cx="95" cy="35" r="5" fill="#fb923c"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 1. HOME / OPENING SCREEN                   -->
+    <!-- ========================================== -->
+    <main id="screen-home" class="relative z-10 min-h-screen w-full flex flex-col items-center justify-between p-4 md:p-6 lg:p-8">
+        
+        <!-- Top Utility Bar -->
+        <div class="w-full max-w-6xl flex flex-wrap items-center justify-between gap-3">
+            <div class="inline-flex items-center gap-2.5 bg-white/90 backdrop-blur px-4 py-2 rounded-2xl shadow-md border-2 border-sky-200">
+                <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="font-extrabold text-sky-900 text-sm md:text-base tracking-wide">GRADE VI SD • ENGLISH SPEAKING GAME</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button id="btn-home-material" type="button" class="btn-game inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-900 font-extrabold px-4 py-2.5 rounded-2xl shadow-[0_4px_0_#b45309] border-2 border-white text-sm md:text-base">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    <span>LEARN THE MATERIAL</span>
+                </button>
+                <button id="btn-home-sound" type="button" class="btn-game inline-flex items-center gap-2 bg-white hover:bg-sky-50 text-sky-900 font-extrabold px-4 py-2.5 rounded-2xl shadow-[0_4px_0_#0284c7] border-2 border-sky-200 text-sm md:text-base">
+                    <span id="home-sound-icon">🔊</span>
+                    <span id="home-sound-label">SOUND: ON</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Center Hero Section -->
+        <div class="w-full max-w-6xl my-auto py-4 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            
+            <!-- Left / Center Title & Decorative Flying Words -->
+            <div class="lg:col-span-7 flex flex-col items-center lg:items-start text-center lg:text-left">
+                
+                <!-- Decorative Animated Flying Words Preview -->
+                <div class="flex flex-wrap items-center justify-center lg:justify-start gap-5 mb-4">
+                    <!-- Decorative Word 1 -->
+                    <div class="inline-flex items-center island-bob-1">
+                        <svg class="w-8 h-8 -mr-1.5 wing-left" viewBox="0 0 40 36" fill="none">
+                            <path d="M38 18 C24 2, 4 2, 4 14 C4 22, 18 26, 36 22 Z" fill="#ffffff" stroke="#38bdf8" stroke-width="2.5"/>
+                            <path d="M36 21 C22 24, 10 34, 18 34 C26 34, 34 28, 38 22 Z" fill="#bae6fd" stroke="#38bdf8" stroke-width="2"/>
+                        </svg>
+                        <span class="bg-amber-400 text-slate-900 font-title font-bold px-4 py-1.5 rounded-2xl border-2 border-white shadow-md text-lg md:text-xl">She</span>
+                        <svg class="w-8 h-8 -ml-1.5 wing-right" viewBox="0 0 40 36" fill="none">
+                            <path d="M2 18 C16 2, 36 2, 36 14 C36 22, 22 26, 4 22 Z" fill="#ffffff" stroke="#38bdf8" stroke-width="2.5"/>
+                            <path d="M4 21 C18 24, 30 34, 22 34 C14 34, 6 28, 2 22 Z" fill="#bae6fd" stroke="#38bdf8" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <!-- Decorative Word 2 -->
+                    <div class="inline-flex items-center island-bob-2">
+                        <svg class="w-8 h-8 -mr-1.5 wing-left" viewBox="0 0 40 36" fill="none">
+                            <path d="M38 18 C24 2, 4 2, 4 14 C4 22, 18 26, 36 22 Z" fill="#ffffff" stroke="#38bdf8" stroke-width="2.5"/>
+                            <path d="M36 21 C22 24, 10 34, 18 34 C26 34, 34 28, 38 22 Z" fill="#bae6fd" stroke="#38bdf8" stroke-width="2"/>
+                        </svg>
+                        <span class="bg-emerald-400 text-slate-900 font-title font-bold px-4 py-1.5 rounded-2xl border-2 border-white shadow-md text-lg md:text-xl">is</span>
+                        <svg class="w-8 h-8 -ml-1.5 wing-right" viewBox="0 0 40 36" fill="none">
+                            <path d="M2 18 C16 2, 36 2, 36 14 C36 22, 22 26, 4 22 Z" fill="#ffffff" stroke="#38bdf8" stroke-width="2.5"/>
+                            <path d="M4 21 C18 24, 30 34, 22 34 C14 34, 6 28, 2 22 Z" fill="#bae6fd" stroke="#38bdf8" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <!-- Decorative Word 3 -->
+                    <div class="inline-flex items-center island-bob-1">
+                        <svg class="w-8 h-8 -mr-1.5 wing-left" viewBox="0 0 40 36" fill="none">
+                            <path d="M38 18 C24 2, 4 2, 4 14 C4 22, 18 26, 36 22 Z" fill="#ffffff" stroke="#38bdf8" stroke-width="2.5"/>
+                            <path d="M36 21 C22 24, 10 34, 18 34 C26 34, 34 28, 38 22 Z" fill="#bae6fd" stroke="#38bdf8" stroke-width="2"/>
+                        </svg>
+                        <span class="bg-orange-400 text-white font-title font-bold px-4 py-1.5 rounded-2xl border-2 border-white shadow-md text-lg md:text-xl">reading</span>
+                        <svg class="w-8 h-8 -ml-1.5 wing-right" viewBox="0 0 40 36" fill="none">
+                            <path d="M2 18 C16 2, 36 2, 36 14 C36 22, 22 26, 4 22 Z" fill="#ffffff" stroke="#38bdf8" stroke-width="2.5"/>
+                            <path d="M4 21 C18 24, 30 34, 22 34 C14 34, 6 28, 2 22 Z" fill="#bae6fd" stroke="#38bdf8" stroke-width="2"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Main Game Title -->
+                <h1 class="font-title text-4xl sm:text-5xl md:text-6xl font-bold text-white text-outline tracking-wide leading-tight mb-2">
+                    FLYING WORDS ADVENTURE
+                </h1>
+                <h2 class="font-title text-2xl sm:text-3xl font-bold text-yellow-300 text-outline mb-4">
+                    “Catch the Words, Build the Sentence!”
+                </h2>
+                <p class="bg-white/90 backdrop-blur-md text-slate-800 font-bold text-base sm:text-lg md:text-xl px-5 py-3.5 rounded-2xl border-2 border-sky-200 shadow-lg max-w-2xl mb-6">
+                    “Catch the flying words, arrange them, and create the correct English sentence!”
+                </p>
+
+                <!-- Primary Action Buttons -->
+                <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 w-full">
+                    <button id="btn-play-now" type="button" class="btn-game bg-gradient-to-b from-emerald-400 to-emerald-600 text-white font-title text-2xl sm:text-3xl font-bold px-8 py-4 rounded-3xl shadow-[0_7px_0_#065f46,0_12px_20px_rgba(0,0,0,0.25)] border-4 border-white flex items-center gap-3">
+                        <span>🚀 PLAY NOW</span>
+                    </button>
+
+                    <button id="btn-how-to-play" type="button" class="btn-game bg-gradient-to-b from-amber-300 to-amber-500 text-slate-900 font-title text-xl sm:text-2xl font-bold px-6 py-4 rounded-3xl shadow-[0_7px_0_#b45309,0_12px_20px_rgba(0,0,0,0.2)] border-4 border-white flex items-center gap-2">
+                        <span>❓ HOW TO PLAY</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Cartoon Guide Character (Elementary School Student Explorer) -->
+            <div class="lg:col-span-5 flex flex-col items-center justify-center">
+                <div class="relative bg-white/85 backdrop-blur-md p-6 rounded-[2.2rem] border-4 border-white shadow-2xl max-w-sm w-full flex flex-col items-center text-center">
+                    <!-- Speech Bubble -->
+                    <div class="bg-sky-100 border-2 border-sky-300 text-sky-950 font-extrabold px-4 py-2.5 rounded-2xl mb-3 text-sm sm:text-base shadow-sm">
+                        "Hi Friends! Let's practice <span class="text-orange-600 underline">Daily Activities</span> together!"
+                    </div>
+
+                    <!-- Cartoon SD Student SVG Illustration -->
+                    <svg class="w-48 h-48 sm:w-56 sm:h-56" viewBox="0 0 240 240" fill="none">
+                        <!-- Soft sky circle behind character -->
+                        <circle cx="120" cy="125" r="92" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="4"/>
+                        <!-- Floating mini island under feet -->
+                        <ellipse cx="120" cy="205" rx="64" ry="14" fill="#22c55e"/>
+                        <path d="M70 205 L170 205 L148 226 L92 226 Z" fill="#b45309"/>
+                        <!-- Butterfly net in right hand -->
+                        <line x1="175" y1="155" x2="208" y2="68" stroke="#92400e" stroke-width="6" stroke-linecap="round"/>
+                        <ellipse cx="208" cy="56" rx="18" ry="22" transform="rotate(15 208 56)" fill="#bae6fd" fill-opacity="0.6" stroke="#0284c7" stroke-width="4"/>
+                        <!-- Legs & Shoes -->
+                        <rect x="98" y="168" width="14" height="34" rx="6" fill="#fde68a"/>
+                        <rect x="128" y="168" width="14" height="34" rx="6" fill="#fde68a"/>
+                        <rect x="93" y="194" width="22" height="12" rx="6" fill="#1e293b"/>
+                        <rect x="125" y="194" width="22" height="12" rx="6" fill="#1e293b"/>
+                        <!-- Indonesian SD Red Skirt/Shorts & White Shirt Uniform -->
+                        <path d="M90 142 L150 142 L156 176 L84 176 Z" fill="#dc2626"/>
+                        <rect x="88" y="102" width="64" height="44" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+                        <!-- Red Tie & Collar -->
+                        <polygon points="120,106 113,128 120,136 127,128" fill="#dc2626"/>
+                        <polygon points="105,102 120,112 112,116" fill="#e2e8f0"/>
+                        <polygon points="135,102 120,112 128,116" fill="#e2e8f0"/>
+                        <!-- Arms (Left waving, Right holding net) -->
+                        <path d="M88 112 Q62 96 58 76" stroke="#fde68a" stroke-width="14" stroke-linecap="round"/>
+                        <circle cx="58" cy="74" r="9" fill="#fde68a"/>
+                        <path d="M152 112 Q175 128 184 114" stroke="#fde68a" stroke-width="14" stroke-linecap="round"/>
+                        <circle cx="186" cy="112" r="9" fill="#fde68a"/>
+                        <!-- Head & Cheerful Face -->
+                        <circle cx="120" cy="68" r="34" fill="#fde68a"/>
+                        <!-- Hair & SD Cap -->
+                        <path d="M84 64 C84 34, 156 34, 156 64 C146 48, 94 48, 84 64 Z" fill="#1e293b"/>
+                        <path d="M88 50 C88 30, 152 30, 152 50 Z" fill="#dc2626"/>
+                        <path d="M115 48 L162 52 L158 58 L115 54 Z" fill="#b91c1c"/>
+                        <!-- Eyes, Rosy Cheeks, Big Smile -->
+                        <circle cx="107" cy="68" r="4.5" fill="#0f172a"/>
+                        <circle cx="133" cy="68" r="4.5" fill="#0f172a"/>
+                        <circle cx="108.5" cy="66.5" r="1.5" fill="#ffffff"/>
+                        <circle cx="134.5" cy="66.5" r="1.5" fill="#ffffff"/>
+                        <ellipse cx="98" cy="76" rx="5" ry="3" fill="#fb7185" opacity="0.6"/>
+                        <ellipse cx="142" cy="76" rx="5" ry="3" fill="#fb7185" opacity="0.6"/>
+                        <path d="M108 78 Q120 90 132 78" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+                    </svg>
+
+                    <div class="mt-2 font-extrabold text-sky-900 text-sm sm:text-base">
+                        Topic: <span class="bg-amber-200 px-2.5 py-0.5 rounded-lg text-slate-900">Making a Short Sentence</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Footer Note -->
+        <div class="w-full max-w-6xl text-center">
+            <p class="inline-block bg-sky-900/40 backdrop-blur px-5 py-1.5 rounded-full text-white font-bold text-xs sm:text-sm">
+                ✨ Touch or click the flying words • Drag or tap to arrange • Built for Classroom Smart Board ✨
+            </p>
+        </div>
+    </main>
+
+    <!-- ========================================== -->
+    <!-- 2. MAIN GAMEPLAY SCREEN                    -->
+    <!-- ========================================== -->
+    <section id="screen-game" class="hidden relative z-10 min-h-screen lg:h-screen w-full flex flex-col justify-between p-2.5 sm:p-4 lg:p-5 gap-2.5 lg:gap-3">
+        
+        <!-- A. GAME HEADER -->
+        <header class="w-full bg-white/95 backdrop-blur-md rounded-3xl px-4 py-2.5 shadow-lg border-2 border-sky-200 flex flex-wrap items-center justify-between gap-2 sm:gap-4 shrink-0">
+            
+            <!-- Left: Title & Student Name -->
+            <div class="flex items-center gap-3">
+                <button id="btn-game-home" type="button" title="Back to Home" class="btn-game bg-sky-100 hover:bg-sky-200 text-sky-900 font-extrabold px-3.5 py-2 rounded-2xl border-2 border-sky-300 flex items-center gap-1.5 text-sm sm:text-base">
+                    <span>🏠</span>
+                    <span class="hidden sm:inline">HOME</span>
+                </button>
+                <div>
+                    <div class="font-title font-bold text-sky-900 text-base sm:text-xl leading-none">
+                        FLYING WORDS ADVENTURE
+                    </div>
+                    <div id="header-student-name" class="text-xs sm:text-sm font-extrabold text-orange-600 mt-0.5">
+                        Explorer: Smart Student
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center: Question Counter & Progress Bar -->
+            <div class="flex flex-col items-center flex-1 max-w-md min-w-[200px]">
+                <div class="w-full flex items-center justify-between text-xs sm:text-sm font-black text-sky-950 mb-1 px-1">
+                    <span id="header-question-badge" class="bg-sky-600 text-white px-3 py-0.5 rounded-full tracking-wider">QUESTION 1 / 15</span>
+                    <span id="header-progress-text" class="text-sky-800">0% COMPLETED</span>
+                </div>
+                <div class="w-full h-4 bg-sky-100 rounded-full overflow-hidden border-2 border-sky-300 p-0.5">
+                    <div id="header-progress-bar" class="h-full bg-gradient-to-r from-emerald-400 to-green-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Right: Score & Quick Tools -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div id="header-timer-badge" class="bg-sky-100 border-2 border-sky-400 text-sky-950 font-title font-bold px-3.5 py-1.5 rounded-2xl shadow-sm flex items-center gap-1.5 text-base sm:text-xl transition-colors duration-300">
+                    <span>⏱️</span>
+                    <span id="header-timer-value" class="text-xl sm:text-2xl tabular-nums">30s</span>
+                </div>
+
+                <div class="bg-amber-400 border-2 border-amber-600 text-slate-900 font-title font-bold px-4 py-1.5 rounded-2xl shadow-sm flex items-center gap-2 text-base sm:text-xl">
+                    <span>⭐ SCORE:</span>
+                    <span id="header-score-value" class="text-xl sm:text-2xl">0</span>
+                </div>
+
+                <button id="btn-game-material" type="button" title="Learn the Material" class="btn-game bg-amber-100 hover:bg-amber-200 text-amber-900 font-extrabold px-3 py-2 rounded-2xl border-2 border-amber-300 text-sm sm:text-base flex items-center gap-1">
+                    <span>📖</span>
+                    <span class="hidden md:inline">MATERIAL</span>
+                </button>
+
+                <button id="btn-game-sound" type="button" title="Toggle Sound" class="btn-game bg-sky-100 hover:bg-sky-200 text-sky-900 font-extrabold px-3.5 py-2 rounded-2xl border-2 border-sky-300 text-base sm:text-lg">
+                    <span id="game-sound-icon">🔊</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- B. MIDDLE AREA: ACTIVITY PICTURE (LEFT) & SKY FLYING WORDS ARENA (RIGHT) -->
+        <div class="w-full flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-[290px] lg:min-h-0">
+            
+            <!-- Activity Picture Panel (4 Columns on Desktop/Smart Board) -->
+            <div class="lg:col-span-4 bg-white/95 backdrop-blur-md rounded-3xl p-3.5 sm:p-4 shadow-lg border-4 border-white flex flex-col items-center justify-between relative overflow-hidden">
+                <div class="w-full flex items-center justify-between">
+                    <span id="activity-topic-tag" class="bg-orange-500 text-white font-title font-bold px-3.5 py-1 rounded-full text-xs sm:text-sm tracking-wide uppercase shadow-sm">
+                        ACTIVITY 1: SLEEPING
+                    </span>
+                    <span id="words-needed-badge" class="bg-sky-100 text-sky-900 font-extrabold px-3 py-1 rounded-full text-xs sm:text-sm border border-sky-300">
+                        Need 3 Words
+                    </span>
+                </div>
+
+                <!-- Dynamic SVG Illustration Container -->
+                <div id="activity-illustration-box" class="w-full flex-1 flex items-center justify-center my-1 max-h-[190px] sm:max-h-[220px] lg:max-h-full">
+                    <!-- Populated via JS per question -->
+                </div>
+
+                <!-- Helpful Question Prompt -->
+                <div class="w-full bg-sky-50 border-2 border-sky-200 rounded-2xl px-3 py-2 text-center">
+                    <p id="activity-prompt-hint" class="font-extrabold text-sky-950 text-sm sm:text-base leading-snug">
+                        Look at the picture! What sentence describes this activity?
+                    </p>
+                </div>
+            </div>
+
+            <!-- Sky Flying Words Arena (8 Columns on Desktop/Smart Board) -->
+            <div class="lg:col-span-8 relative bg-gradient-to-b from-sky-400/50 via-sky-300/45 to-sky-100/60 backdrop-blur-[2px] rounded-3xl border-4 border-white shadow-inner overflow-hidden flex flex-col min-h-[240px] sm:min-h-[270px]">
+                
+                <!-- Arena Top Instruction Banner -->
+                <div class="relative z-10 pointer-events-none flex items-center justify-between px-4 pt-2.5">
+                    <div class="bg-white/85 backdrop-blur px-3.5 py-1 rounded-full text-sky-950 font-extrabold text-xs sm:text-sm shadow-sm border border-sky-200">
+                        🦋 Touch or click the fast flying words to catch them!
+                    </div>
+                    <div id="sky-remaining-counter" class="bg-white/85 backdrop-blur px-3.5 py-1 rounded-full text-emerald-800 font-extrabold text-xs sm:text-sm shadow-sm border border-emerald-200">
+                        Flying Words: 4
+                    </div>
+                </div>
+
+                <!-- Decorative Soft Clouds inside Arena -->
+                <svg class="absolute top-12 left-8 w-28 h-14 text-white/45 pointer-events-none" viewBox="0 0 160 75" fill="currentColor">
+                    <circle cx="50" cy="45" r="25"/><circle cx="80" cy="32" r="30"/><circle cx="115" cy="45" r="24"/><rect x="45" y="42" width="75" height="28" rx="14"/>
+                </svg>
+                <svg class="absolute bottom-8 right-10 w-36 h-16 text-white/45 pointer-events-none" viewBox="0 0 160 75" fill="currentColor">
+                    <circle cx="50" cy="45" r="25"/><circle cx="80" cy="32" r="30"/><circle cx="115" cy="45" r="24"/><rect x="45" y="42" width="75" height="28" rx="14"/>
+                </svg>
+
+                <!-- Interactive Flying Words Layer -->
+                <div id="sky-arena" class="relative w-full flex-1 overflow-hidden">
+                    <!-- Flying word nodes injected and animated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- C. SENTENCE BUILDER BOX (BOTTOM) -->
+        <div id="sentence-builder-panel" class="w-full bg-white/95 backdrop-blur-md rounded-3xl p-3 sm:p-4 shadow-xl border-4 border-amber-400 shrink-0 flex flex-col gap-2.5">
+            
+            <!-- Builder Header & Feedback Banner -->
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                    <span class="bg-amber-400 text-slate-900 font-title font-bold px-3.5 py-1 rounded-xl text-sm sm:text-lg shadow-sm">
+                        ✨ BUILD YOUR SENTENCE HERE!
+                    </span>
+                    <span class="text-xs sm:text-sm font-bold text-slate-600 hidden md:inline">
+                        (Drag cards or tap two cards to swap order • Tap a card + press REMOVE to return it)
+                    </span>
+                </div>
+
+                <!-- Dynamic Inline Feedback Pill (For Wrong / Incomplete Notices) -->
+                <div id="inline-feedback-banner" class="hidden items-center gap-2 px-4 py-1 rounded-xl font-title font-bold text-sm sm:text-base shadow-sm">
+                    <span id="inline-feedback-text"></span>
+                </div>
+            </div>
+
+            <!-- Sentence Slot Dropzone Container -->
+            <div id="sentence-box" class="w-full min-h-[78px] sm:min-h-[86px] bg-sky-50/90 rounded-2xl border-3 border-dashed border-sky-300 px-3 sm:px-4 py-2.5 flex flex-wrap items-center justify-center sm:justify-start gap-2.5 sm:gap-3.5 transition-colors">
+                <!-- Static caught word cards are rendered here -->
+            </div>
+
+            <!-- Action Buttons Row -->
+            <div class="flex flex-wrap items-center justify-between gap-2.5 pt-0.5">
+                <div class="flex items-center gap-2.5">
+                    <button id="btn-remove-word" type="button" class="btn-game bg-rose-100 hover:bg-rose-200 text-rose-800 font-title font-bold px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl border-2 border-rose-300 shadow-[0_4px_0_#fda4af] text-sm sm:text-lg flex items-center gap-1.5">
+                        <span>↩️ REMOVE</span>
+                    </button>
+                    <button id="btn-clear-all" type="button" class="btn-game bg-slate-100 hover:bg-slate-200 text-slate-700 font-title font-bold px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl border-2 border-slate-300 shadow-[0_4px_0_#cbd5e1] text-sm sm:text-lg flex items-center gap-1.5">
+                        <span>🗑️ CLEAR ALL</span>
+                    </button>
+                </div>
+
+                <!-- Live Sentence Preview & Check Answer Button -->
+                <div class="flex items-center gap-3 ml-auto">
+                    <div id="sentence-preview-text" class="hidden xl:block text-slate-600 font-extrabold text-base bg-slate-100 px-4 py-2 rounded-xl border border-slate-200">
+                        Sentence: <span class="text-sky-900 font-black">...</span>
+                    </div>
+
+                    <button id="btn-check-answer" type="button" class="btn-game bg-gradient-to-b from-emerald-400 to-emerald-600 text-white font-title font-bold px-6 sm:px-8 py-2.5 sm:py-3 rounded-2xl border-2 border-white shadow-[0_5px_0_#065f46,0_8px_15px_rgba(0,0,0,0.2)] text-base sm:text-xl flex items-center gap-2">
+                        <span>✅ CHECK ANSWER</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 3. FINAL RESULTS SCREEN (AFTER QUESTION 10)-->
+    <!-- ========================================== -->
+    <section id="screen-results" class="hidden relative z-10 min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6">
+        <div class="bg-white/95 backdrop-blur-md w-full max-w-4xl rounded-[2.5rem] p-6 sm:p-8 shadow-2xl border-4 border-amber-400 text-center flex flex-col items-center">
+            
+            <!-- Animated Stars Row -->
+            <div class="flex items-center justify-center gap-3 mb-2">
+                <span class="text-4xl sm:text-5xl">🌟</span>
+                <span class="text-5xl sm:text-6xl">🏆</span>
+                <span class="text-4xl sm:text-5xl">🌟</span>
+            </div>
+
+            <h1 class="font-title text-3xl sm:text-4xl md:text-5xl font-bold text-sky-900 mb-1">
+                CONGRATULATIONS, ENGLISH EXPLORER!
+            </h1>
+            <p id="result-student-name" class="text-lg sm:text-xl font-black text-orange-600 mb-5">
+                Explorer: Smart Student
+            </p>
+
+            <!-- Stats & Badge Grid -->
+            <div class="w-full grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <!-- Stat Card 1 -->
+                <div class="bg-sky-50 border-2 border-sky-200 rounded-3xl p-4 flex flex-col items-center justify-center">
+                    <span class="text-xs sm:text-sm font-extrabold text-sky-700 uppercase">Total Questions</span>
+                    <span id="result-total-questions" class="font-title text-3xl sm:text-4xl font-bold text-sky-950 mt-1">15</span>
+                    <span class="text-xs font-bold text-emerald-700 mt-1">Solved: <strong id="result-solved-questions">15</strong> / 15</span>
+                </div>
+
+                <!-- Stat Card 2: Final Score -->
+                <div class="bg-amber-50 border-2 border-amber-300 rounded-3xl p-4 flex flex-col items-center justify-center">
+                    <span class="text-xs sm:text-sm font-extrabold text-amber-800 uppercase">Final Score</span>
+                    <div class="font-title text-4xl sm:text-5xl font-bold text-amber-600 mt-1">
+                        <span id="result-final-score">150</span><span class="text-2xl text-amber-800">/150</span>
+                    </div>
+                    <span id="result-score-100" class="text-xs font-bold text-amber-900 mt-1">Nilai Akhir: 100 / 100</span>
+                </div>
+
+                <!-- Stat Card 3: Award Badge -->
+                <div class="bg-emerald-50 border-2 border-emerald-300 rounded-3xl p-4 flex flex-col items-center justify-center">
+                    <span class="text-xs sm:text-sm font-extrabold text-emerald-800 uppercase">Special Badge</span>
+                    <div id="result-badge-icon" class="text-3xl mt-1">👑</div>
+                    <span id="result-badge-title" class="font-title text-xl sm:text-2xl font-bold text-emerald-900">English Master</span>
+                </div>
+            </div>
+
+            <!-- Motivational Bilingual Message -->
+            <div class="w-full bg-gradient-to-r from-sky-100 via-white to-amber-100 border-2 border-sky-200 rounded-3xl p-4 sm:p-5 mb-6">
+                <p id="result-message-en" class="font-title text-xl sm:text-2xl font-bold text-sky-900 mb-1">
+                    “Fantastic! You are an English Master!”
+                </p>
+                <p id="result-message-id" class="font-bold text-slate-700 text-base sm:text-lg">
+                    “Hebat! Kamu berhasil menyusun 10 kalimat Bahasa Inggris dengan sangat baik!”
+                </p>
+            </div>
+
+            <!-- Final Action Buttons -->
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <button id="btn-play-again" type="button" class="btn-game bg-gradient-to-b from-emerald-400 to-emerald-600 text-white font-title text-xl sm:text-2xl font-bold px-7 py-3.5 rounded-2xl shadow-[0_5px_0_#065f46] border-2 border-white flex items-center gap-2">
+                    <span>🔄 PLAY AGAIN</span>
+                </button>
+                <button id="btn-review-sentences" type="button" class="btn-game bg-gradient-to-b from-amber-300 to-amber-500 text-slate-900 font-title text-xl sm:text-2xl font-bold px-7 py-3.5 rounded-2xl shadow-[0_5px_0_#b45309] border-2 border-white flex items-center gap-2">
+                    <span>📋 REVIEW SENTENCES</span>
+                </button>
+                <button id="btn-results-home" type="button" class="btn-game bg-sky-600 hover:bg-sky-500 text-white font-title text-xl sm:text-2xl font-bold px-7 py-3.5 rounded-2xl shadow-[0_5px_0_#075985] border-2 border-white flex items-center gap-2">
+                    <span>🏠 BACK TO HOME</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 4. MODALS & OVERLAYS                       -->
+    <!-- ========================================== -->
+
+    <!-- MODAL 1: STUDENT NAME ENTRY (WHEN PLAY NOW IS CLICKED) -->
+    <div id="modal-name" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] max-w-md w-full p-6 sm:p-8 border-4 border-sky-400 shadow-2xl text-center">
+            <div class="text-5xl mb-2">🎒</div>
+            <h3 class="font-title text-2xl sm:text-3xl font-bold text-sky-900 mb-1">READY FOR ADVENTURE?</h3>
+            <p class="text-slate-600 font-bold text-sm sm:text-base mb-5">
+                Enter your name below (or leave it blank to start right away!):
+            </p>
+            <input id="input-student-name" type="text" maxlength="28" placeholder="Type student or group name..." class="w-full px-4 py-3.5 text-lg sm:text-xl font-extrabold text-center text-sky-950 bg-sky-50 border-3 border-sky-300 rounded-2xl focus:outline-none focus:border-orange-500 mb-5" />
+            <div class="flex items-center justify-center gap-3">
+                <button id="btn-cancel-name" type="button" class="btn-game bg-slate-200 text-slate-700 font-title font-bold text-lg px-5 py-3 rounded-2xl">
+                    CANCEL
+                </button>
+                <button id="btn-start-game" type="button" class="btn-game bg-gradient-to-b from-emerald-400 to-emerald-600 text-white font-title font-bold text-xl px-8 py-3 rounded-2xl shadow-[0_5px_0_#065f46] flex-1">
+                    🚀 START GAME
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: HOW TO PLAY -->
+    <div id="modal-how-to-play" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] max-w-2xl w-full p-6 sm:p-8 border-4 border-amber-400 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-title text-2xl sm:text-3xl font-bold text-sky-900">❓ HOW TO PLAY</h3>
+                <button data-close-modal="modal-how-to-play" type="button" class="btn-game bg-rose-100 text-rose-700 font-black w-10 h-10 rounded-full text-xl">✕</button>
+            </div>
+            <div class="space-y-3 text-slate-700 font-bold text-base sm:text-lg">
+                <div class="flex items-start gap-3 bg-sky-50 p-3.5 rounded-2xl border border-sky-200">
+                    <span class="bg-sky-600 text-white font-title w-8 h-8 rounded-full flex items-center justify-center shrink-0">1</span>
+                    <p><strong>Look at the Picture:</strong> Observe the daily activity shown on the left card.</p>
+                </div>
+                <div class="flex items-start gap-3 bg-amber-50 p-3.5 rounded-2xl border border-amber-200">
+                    <span class="bg-amber-500 text-white font-title w-8 h-8 rounded-full flex items-center justify-center shrink-0">2</span>
+                    <p><strong>Catch the Flying Words:</strong> Touch or click the winged words in the sky. When caught, the word flies into the Sentence Box and its wings disappear!</p>
+                </div>
+                <div class="flex items-start gap-3 bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200">
+                    <span class="bg-emerald-600 text-white font-title w-8 h-8 rounded-full flex items-center justify-center shrink-0">3</span>
+                    <p><strong>Build Your Sentence:</strong> Drag and drop cards (or tap two cards to swap them) to arrange the correct English sentence. Use <strong>REMOVE</strong> or <strong>CLEAR ALL</strong> if you catch a distractor word.</p>
+                </div>
+                <div class="flex items-start gap-3 bg-purple-50 p-3.5 rounded-2xl border border-purple-200">
+                    <span class="bg-purple-600 text-white font-title w-8 h-8 rounded-full flex items-center justify-center shrink-0">4</span>
+                    <p><strong>Check Answer (30 Seconds):</strong> Each question has a <strong>30-second timer</strong>! Press <strong>CHECK ANSWER</strong> before time runs out to earn <strong>+10 points</strong> and advance to the next question!</p>
+                </div>
+            </div>
+            <div class="mt-6 text-center">
+                <button data-close-modal="modal-how-to-play" type="button" class="btn-game bg-sky-600 text-white font-title text-xl font-bold px-8 py-3 rounded-2xl shadow-[0_4px_0_#075985]">
+                    GOT IT! LET'S PLAY
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: LEARN THE MATERIAL (DAILY ACTIVITIES - GRADE VI SD) -->
+    <div id="modal-material" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] max-w-3xl w-full p-6 sm:p-8 border-4 border-sky-400 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <span class="text-xs font-black uppercase bg-amber-300 text-slate-900 px-3 py-1 rounded-full">English Grade VI SD</span>
+                    <h3 class="font-title text-2xl sm:text-3xl font-bold text-sky-900 mt-1">📖 LEARN THE MATERIAL: DAILY ACTIVITIES</h3>
+                </div>
+                <button data-close-modal="modal-material" type="button" class="btn-game bg-rose-100 text-rose-700 font-black w-10 h-10 rounded-full text-xl">✕</button>
+            </div>
+
+            <!-- Sentence Pattern Box -->
+            <div class="bg-gradient-to-r from-sky-600 to-sky-500 text-white p-4 rounded-2xl shadow-md mb-4 text-center">
+                <div class="text-xs uppercase font-bold tracking-wider opacity-90 mb-1">Sentence Pattern (Pola Kalimat)</div>
+                <div class="font-title text-xl sm:text-3xl font-bold tracking-wide">
+                    Subject + <span class="text-yellow-300">is / am / are</span> + <span class="text-emerald-200">Verb-ing</span>
+                </div>
+            </div>
+
+            <!-- Grammar Explanation Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 text-sm sm:text-base font-bold">
+                <div class="bg-sky-50 p-3.5 rounded-2xl border border-sky-200 space-y-1.5">
+                    <div class="font-black text-sky-900 underline">Subject (Subjek):</div>
+                    <p>• <span class="text-orange-600 font-black">I</span> = saya (gunakan <strong>am</strong>)</p>
+                    <p>• <span class="text-orange-600 font-black">He / She</span> = dia laki-laki / perempuan (gunakan <strong>is</strong>)</p>
+                    <p>• <span class="text-orange-600 font-black">You / We / They</span> = kamu / kami / mereka (gunakan <strong>are</strong>)</p>
+                </div>
+                <div class="bg-amber-50 p-3.5 rounded-2xl border border-amber-200 space-y-1.5">
+                    <div class="font-black text-amber-900 underline">To Be & Verb-ing:</div>
+                    <p>• <span class="text-emerald-700 font-black">am / is / are</span> = kata bantu (sedang)</p>
+                    <p>• <span class="text-emerald-700 font-black">Verb-ing</span> = kata kerja untuk kegiatan yang sedang berlangsung sekarang.</p>
+                </div>
+            </div>
+
+            <!-- Examples List with Speaker Pronunciation Buttons -->
+            <h4 class="font-title text-lg sm:text-xl font-bold text-slate-800 mb-2.5">🔊 Examples (Klik tombol speaker untuk mendengar pelafalan):</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-6">
+                <div class="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                    <div>
+                        <div class="font-extrabold text-sky-950 text-base sm:text-lg">I am reading.</div>
+                        <div class="text-xs sm:text-sm font-bold text-slate-600">Saya sedang membaca.</div>
+                    </div>
+                    <button type="button" data-speak="I am reading." class="btn-game bg-sky-500 text-white px-3 py-2 rounded-xl font-bold text-sm">🔊 Listen</button>
+                </div>
+                <div class="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                    <div>
+                        <div class="font-extrabold text-sky-950 text-base sm:text-lg">He is eating.</div>
+                        <div class="text-xs sm:text-sm font-bold text-slate-600">Dia sedang makan.</div>
+                    </div>
+                    <button type="button" data-speak="He is eating." class="btn-game bg-sky-500 text-white px-3 py-2 rounded-xl font-bold text-sm">🔊 Listen</button>
+                </div>
+                <div class="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                    <div>
+                        <div class="font-extrabold text-sky-950 text-base sm:text-lg">She is sleeping.</div>
+                        <div class="text-xs sm:text-sm font-bold text-slate-600">Dia sedang tidur.</div>
+                    </div>
+                    <button type="button" data-speak="She is sleeping." class="btn-game bg-sky-500 text-white px-3 py-2 rounded-xl font-bold text-sm">🔊 Listen</button>
+                </div>
+                <div class="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                    <div>
+                        <div class="font-extrabold text-sky-950 text-base sm:text-lg">They are playing.</div>
+                        <div class="text-xs sm:text-sm font-bold text-slate-600">Mereka sedang bermain.</div>
+                    </div>
+                    <button type="button" data-speak="They are playing." class="btn-game bg-sky-500 text-white px-3 py-2 rounded-xl font-bold text-sm">🔊 Listen</button>
+                </div>
+                <div class="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                    <div>
+                        <div class="font-extrabold text-sky-950 text-base sm:text-lg">We are studying.</div>
+                        <div class="text-xs sm:text-sm font-bold text-slate-600">Kami sedang belajar.</div>
+                    </div>
+                    <button type="button" data-speak="We are studying." class="btn-game bg-sky-500 text-white px-3 py-2 rounded-xl font-bold text-sm">🔊 Listen</button>
+                </div>
+                <div class="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                    <div>
+                        <div class="font-extrabold text-sky-950 text-base sm:text-lg">You are writing.</div>
+                        <div class="text-xs sm:text-sm font-bold text-slate-600">Kamu sedang menulis.</div>
+                    </div>
+                    <button type="button" data-speak="You are writing." class="btn-game bg-sky-500 text-white px-3 py-2 rounded-xl font-bold text-sm">🔊 Listen</button>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <button data-close-modal="modal-material" type="button" class="btn-game bg-emerald-500 text-white font-title text-xl font-bold px-8 py-3 rounded-2xl shadow-[0_4px_0_#065f46]">
+                    BACK TO GAME
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: REVIEW ALL 15 SENTENCES -->
+    <div id="modal-review" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] max-w-3xl w-full p-6 sm:p-8 border-4 border-amber-400 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-title text-2xl sm:text-3xl font-bold text-sky-900">📋 REVIEW 15 SENTENCES</h3>
+                <button data-close-modal="modal-review" type="button" class="btn-game bg-rose-100 text-rose-700 font-black w-10 h-10 rounded-full text-xl">✕</button>
+            </div>
+            <div id="review-sentences-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                <!-- Populated dynamically with all 10 sentences + Indonesian meaning + speaker button -->
+            </div>
+            <div class="text-center">
+                <button data-close-modal="modal-review" type="button" class="btn-game bg-sky-600 text-white font-title text-xl font-bold px-8 py-3 rounded-2xl shadow-[0_4px_0_#075985]">
+                    CLOSE REVIEW
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- OVERLAY 5: CORRECT ANSWER CELEBRATION (AUTO-ADVANCES TO NEXT QUESTION) -->
+    <div id="overlay-correct" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[2px] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] max-w-lg w-full p-6 sm:p-8 border-4 border-emerald-400 shadow-2xl text-center transform scale-100">
+            <!-- Animated Stars -->
+            <div class="flex items-center justify-center gap-4 mb-3">
+                <span class="text-5xl star-pop-1">⭐</span>
+                <span class="text-6xl star-pop-2">🌟</span>
+                <span class="text-5xl star-pop-3">⭐</span>
+            </div>
+
+            <div class="inline-block bg-emerald-100 text-emerald-800 font-black px-4 py-1 rounded-full text-sm mb-2">
+                +10 POINTS!
+            </div>
+
+            <h3 class="font-title text-3xl sm:text-4xl font-bold text-emerald-600 mb-3">
+                CORRECT! EXCELLENT!
+            </h3>
+
+            <!-- Correct English Sentence & Meaning -->
+            <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-4 mb-3">
+                <div class="flex items-center justify-center gap-2.5 mb-1">
+                    <p id="correct-sentence-en" class="font-title text-2xl sm:text-3xl font-bold text-sky-950">
+                        “She is sleeping.”
+                    </p>
+                    <button id="btn-speak-correct" type="button" title="Listen Pronunciation" class="btn-game bg-sky-500 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg shadow">
+                        🔊
+                    </button>
+                </div>
+                <p id="correct-sentence-id" class="font-extrabold text-slate-600 text-base sm:text-lg">
+                    Arti: Dia sedang tidur.
+                </p>
+            </div>
+
+            <p id="correct-next-status" class="text-xs sm:text-sm font-extrabold text-emerald-700 animate-pulse">
+                Moving to next question automatically...
+            </p>
+        </div>
+    </div>
+
+    <!-- OVERLAY 6: TIME'S UP NOTIFICATION (AUTO-ADVANCES WHEN 30 SECONDS EXPIRE) -->
+    <div id="overlay-timeout" class="hidden fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-[2px] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[2.5rem] max-w-lg w-full p-6 sm:p-8 border-4 border-rose-400 shadow-2xl text-center transform scale-100">
+            <div class="text-6xl mb-2 animate-bounce">⏰</div>
+
+            <div class="inline-block bg-rose-100 text-rose-800 font-black px-4 py-1 rounded-full text-sm mb-2">
+                30 SECONDS ENDED
+            </div>
+
+            <h3 class="font-title text-3xl sm:text-4xl font-bold text-rose-600 mb-3">
+                TIME'S UP! WAKTU HABIS!
+            </h3>
+
+            <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-4 mb-3">
+                <div class="text-xs font-extrabold uppercase text-sky-700 mb-1">Correct Sentence:</div>
+                <p id="timeout-sentence-en" class="font-title text-2xl sm:text-3xl font-bold text-sky-950 mb-1">
+                    “I am reading.”
+                </p>
+                <p id="timeout-sentence-id" class="font-extrabold text-slate-600 text-base sm:text-lg">
+                    Arti: Saya sedang membaca.
+                </p>
+            </div>
+
+            <p id="timeout-next-status" class="text-xs sm:text-sm font-extrabold text-rose-700 animate-pulse">
+                Moving to next question automatically...
+            </p>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Returns a clear, vibrant, child-friendly cartoon SVG illustration for each of the 15 questions.
+         */
+        function getActivitySVG(type) {
+            switch (type) {
+                case 'SLEEPING':
+                    // Girl sleeping peacefully in bed with blanket, pillow, moon window & Zzz
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#1e293b"/>
+                        <!-- Bedroom Window with Moon & Stars -->
+                        <rect x="30" y="22" width="66" height="66" rx="10" fill="#0f172a" stroke="#475569" stroke-width="4"/>
+                        <path d="M68 38 A16 16 0 1 0 82 64 A13 13 0 1 1 68 38 Z" fill="#fde047"/>
+                        <circle cx="46" cy="42" r="2.5" fill="#fde047"/>
+                        <circle cx="52" cy="70" r="2" fill="#fde047"/>
+                        <!-- Bed Frame & Mattress -->
+                        <rect x="28" y="102" width="16" height="66" rx="6" fill="#b45309"/>
+                        <rect x="236" y="118" width="14" height="50" rx="6" fill="#b45309"/>
+                        <rect x="38" y="124" width="206" height="32" rx="10" fill="#f8fafc"/>
+                        <!-- Soft Pillow -->
+                        <rect x="48" y="104" width="62" height="28" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+                        <!-- Girl Head Sleeping on Pillow -->
+                        <path d="M58 108 C54 84, 108 84, 106 112 C106 124, 58 124, 58 108 Z" fill="#1e293b"/>
+                        <circle cx="62" cy="96" r="6" fill="#ec4899"/>
+                        <circle cx="84" cy="110" r="19" fill="#fde68a"/>
+                        <path d="M76 108 Q80 113 84 108" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                        <path d="M88 108 Q92 113 96 108" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                        <ellipse cx="75" cy="114" rx="3.5" ry="2" fill="#fb7185" opacity="0.6"/>
+                        <path d="M82 118 Q86 121 90 118" stroke="#0f172a" stroke-width="2" stroke-linecap="round" fill="none"/>
+                        <!-- Pink Blanket over body -->
+                        <path d="M104 114 C145 106, 200 112, 238 124 L238 156 L104 156 Z" fill="#f472b6"/>
+                        <path d="M104 114 L120 114 L120 156 L104 156 Z" fill="#fbcfe8"/>
+                        <!-- Floating Zzz -->
+                        <text x="125" y="78" fill="#fde047" font-family="Fredoka, sans-serif" font-weight="700" font-size="22">Z</text>
+                        <text x="148" y="58" fill="#fde047" font-family="Fredoka, sans-serif" font-weight="700" font-size="28">z</text>
+                        <text x="172" y="38" fill="#fde047" font-family="Fredoka, sans-serif" font-weight="700" font-size="34">Z</text>
+                    </svg>`;
+
+                case 'EATING':
+                    // Boy sitting at dining table happily eating food with spoon
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#fef3c7"/>
+                        <circle cx="140" cy="64" r="30" fill="#fde68a"/>
+                        <path d="M108 58 C110 26, 170 26, 172 58 C160 44, 120 44, 108 58 Z" fill="#1e293b"/>
+                        <circle cx="128" cy="60" r="4" fill="#0f172a"/>
+                        <circle cx="152" cy="60" r="4" fill="#0f172a"/>
+                        <path d="M128 70 Q140 86 152 70 Z" fill="#ef4444"/>
+                        <path d="M102 96 L178 96 L186 144 L94 144 Z" fill="#3b82f6"/>
+                        <rect x="28" y="138" width="224" height="36" rx="10" fill="#d97706"/>
+                        <ellipse cx="140" cy="138" rx="46" ry="12" fill="#ffffff" stroke="#94a3b8" stroke-width="3"/>
+                        <path d="M112 136 Q140 112 168 136 Z" fill="#f8fafc"/>
+                        <circle cx="132" cy="130" r="5" fill="#ef4444"/>
+                        <circle cx="148" cy="128" r="5" fill="#22c55e"/>
+                        <circle cx="140" cy="124" r="5" fill="#f97316"/>
+                        <circle cx="102" cy="84" r="9" fill="#fde68a"/>
+                        <line x1="98" y1="84" x2="128" y2="76" stroke="#64748b" stroke-width="5" stroke-linecap="round"/>
+                        <ellipse cx="130" cy="75" rx="7" ry="4.5" fill="#94a3b8"/>
+                    </svg>`;
+
+                case 'PLAYING':
+                    // Two cheerful children playing together with a soccer ball in the park
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#e0f2fe"/>
+                        <path d="M8 135 Q140 120 272 135 L272 182 L8 182 Z" fill="#4ade80"/>
+                        <!-- Child 1 (Left Boy) -->
+                        <circle cx="78" cy="68" r="22" fill="#fde68a"/>
+                        <path d="M56 62 C58 38, 98 38, 100 62 Z" fill="#1e293b"/>
+                        <circle cx="71" cy="66" r="3" fill="#0f172a"/>
+                        <circle cx="85" cy="66" r="3" fill="#0f172a"/>
+                        <path d="M71 75 Q78 82 85 75" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <rect x="62" y="90" width="32" height="36" rx="10" fill="#f97316"/>
+                        <line x1="60" y1="98" x2="42" y2="80" stroke="#fde68a" stroke-width="9" stroke-linecap="round"/>
+                        <line x1="94" y1="98" x2="112" y2="82" stroke="#fde68a" stroke-width="9" stroke-linecap="round"/>
+                        <line x1="70" y1="126" x2="64" y2="154" stroke="#1e293b" stroke-width="9" stroke-linecap="round"/>
+                        <line x1="86" y1="126" x2="98" y2="148" stroke="#1e293b" stroke-width="9" stroke-linecap="round"/>
+                        <!-- Child 2 (Right Girl) -->
+                        <circle cx="202" cy="68" r="22" fill="#fde68a"/>
+                        <path d="M178 64 C180 38, 224 38, 226 64 Z" fill="#451a03"/>
+                        <circle cx="174" cy="58" r="7" fill="#ec4899"/>
+                        <circle cx="228" cy="58" r="7" fill="#ec4899"/>
+                        <circle cx="195" cy="66" r="3" fill="#0f172a"/>
+                        <circle cx="209" cy="66" r="3" fill="#0f172a"/>
+                        <path d="M195 75 Q202 82 209 75" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <rect x="186" y="90" width="32" height="36" rx="10" fill="#ec4899"/>
+                        <line x1="186" y1="98" x2="168" y2="82" stroke="#fde68a" stroke-width="9" stroke-linecap="round"/>
+                        <line x1="218" y1="98" x2="236" y2="80" stroke="#fde68a" stroke-width="9" stroke-linecap="round"/>
+                        <line x1="194" y1="126" x2="184" y2="148" stroke="#1e293b" stroke-width="9" stroke-linecap="round"/>
+                        <line x1="210" y1="126" x2="216" y2="154" stroke="#1e293b" stroke-width="9" stroke-linecap="round"/>
+                        <!-- Bouncing Ball in Center -->
+                        <circle cx="140" cy="116" r="20" fill="#ffffff" stroke="#0f172a" stroke-width="3"/>
+                        <polygon points="140,105 148,112 145,121 135,121 132,112" fill="#0f172a"/>
+                    </svg>`;
+
+                case 'READING':
+                    // First-person / student holding an open book and reading ("I am reading.")
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#f3e8ff"/>
+                        <!-- Speech bubble "I / ME" -->
+                        <rect x="20" y="18" width="54" height="28" rx="10" fill="#7c3aed"/>
+                        <text x="47" y="37" text-anchor="middle" fill="#ffffff" font-family="Fredoka, sans-serif" font-weight="700" font-size="16">I (Saya)</text>
+                        <circle cx="140" cy="64" r="30" fill="#fde68a"/>
+                        <path d="M110 56 C112 28, 168 28, 170 56 C156 44, 124 44, 110 56 Z" fill="#1e293b"/>
+                        <circle cx="128" cy="64" r="9" stroke="#d97706" stroke-width="3" fill="#ffffff" fill-opacity="0.4"/>
+                        <circle cx="152" cy="64" r="9" stroke="#d97706" stroke-width="3" fill="#ffffff" fill-opacity="0.4"/>
+                        <line x1="137" y1="64" x2="143" y2="64" stroke="#d97706" stroke-width="3"/>
+                        <circle cx="128" cy="66" r="3.5" fill="#0f172a"/>
+                        <circle cx="152" cy="66" r="3.5" fill="#0f172a"/>
+                        <path d="M133 78 Q140 83 147 78" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M104 94 L176 94 L188 164 L92 164 Z" fill="#a855f7"/>
+                        <!-- Open Book Held in Front -->
+                        <path d="M78 104 L140 114 L140 164 L78 154 Z" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
+                        <path d="M202 104 L140 114 L140 164 L202 154 Z" fill="#dc2626" stroke="#ffffff" stroke-width="2"/>
+                        <path d="M84 100 L140 110 L140 158 L84 148 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+                        <path d="M196 100 L140 110 L140 158 L196 148 Z" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+                        <circle cx="80" cy="128" r="9" fill="#fde68a"/>
+                        <circle cx="200" cy="128" r="9" fill="#fde68a"/>
+                    </svg>`;
+
+                case 'STUDYING':
+                    // Two students studying together at a desk with books ("We are studying.")
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#fef9c3"/>
+                        <rect x="18" y="16" width="76" height="26" rx="9" fill="#0284c7"/>
+                        <text x="56" y="34" text-anchor="middle" fill="#ffffff" font-family="Fredoka, sans-serif" font-weight="700" font-size="14">We (Kami)</text>
+                        <!-- Student 1 (Left) -->
+                        <circle cx="96" cy="68" r="24" fill="#fde68a"/>
+                        <path d="M72 62 C74 36, 118 36, 120 62 Z" fill="#1e293b"/>
+                        <circle cx="88" cy="66" r="3.5" fill="#0f172a"/>
+                        <circle cx="104" cy="66" r="3.5" fill="#0f172a"/>
+                        <path d="M89 76 Q96 81 103 76" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M68 94 L124 94 L130 138 L62 138 Z" fill="#ef4444"/>
+                        <!-- Student 2 (Right) -->
+                        <circle cx="184" cy="68" r="24" fill="#fde68a"/>
+                        <path d="M160 62 C162 36, 206 36, 208 62 Z" fill="#451a03"/>
+                        <circle cx="176" cy="66" r="3.5" fill="#0f172a"/>
+                        <circle cx="192" cy="66" r="3.5" fill="#0f172a"/>
+                        <path d="M177 76 Q184 81 191 76" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M156 94 L212 94 L218 138 L150 138 Z" fill="#0ea5e9"/>
+                        <!-- Shared Study Desk & Books -->
+                        <rect x="24" y="134" width="232" height="40" rx="10" fill="#b45309"/>
+                        <rect x="64" y="118" width="56" height="18" rx="4" fill="#22c55e" stroke="#ffffff" stroke-width="2"/>
+                        <polygon points="146,120 206,120 214,142 138,142" fill="#ffffff" stroke="#64748b" stroke-width="2"/>
+                        <line x1="176" y1="120" x2="176" y2="142" stroke="#94a3b8" stroke-width="2"/>
+                    </svg>`;
+
+                case 'RUNNING':
+                    // Boy in sporty outfit running fast on a track with speed lines
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#dcfce7"/>
+                        <rect x="8" y="142" width="264" height="40" rx="14" fill="#ea580c"/>
+                        <line x1="20" y1="162" x2="260" y2="162" stroke="#ffffff" stroke-width="3" stroke-dasharray="14 10"/>
+                        <line x1="26" y1="56" x2="76" y2="56" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                        <line x1="18" y1="88" x2="62" y2="88" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                        <line x1="32" y1="118" x2="72" y2="118" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                        <circle cx="158" cy="52" r="24" fill="#fde68a"/>
+                        <path d="M134 46 C138 22, 180 22, 182 46 Z" fill="#1e293b"/>
+                        <rect x="134" y="38" width="48" height="7" rx="3" fill="#ef4444"/>
+                        <circle cx="166" cy="50" r="3.5" fill="#0f172a"/>
+                        <path d="M158 60 Q165 66 172 60" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M138 74 L172 78 L160 120 L126 116 Z" fill="#2563eb"/>
+                        <path d="M164 82 L194 98 L210 78" stroke="#fde68a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M138 82 L112 96 L98 78" stroke="#fde68a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M154 118 L188 132 L206 154" stroke="#1e293b" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M134 118 L108 138 L84 128" stroke="#1e293b" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+                        <rect x="198" y="148" width="22" height="10" rx="5" fill="#ef4444"/>
+                        <rect x="72" y="120" width="20" height="10" rx="5" fill="#ef4444"/>
+                    </svg>`;
+
+                case 'WRITING':
+                    // Student sitting at desk writing in a notebook with a pencil ("You are writing.")
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#e0f2fe"/>
+                        <rect x="18" y="16" width="82" height="26" rx="9" fill="#0284c7"/>
+                        <text x="59" y="34" text-anchor="middle" fill="#ffffff" font-family="Fredoka, sans-serif" font-weight="700" font-size="14">You (Kamu)</text>
+                        <circle cx="140" cy="58" r="28" fill="#fde68a"/>
+                        <path d="M110 54 C112 24, 168 24, 170 54 Z" fill="#1e293b"/>
+                        <circle cx="130" cy="60" r="3.5" fill="#0f172a"/>
+                        <circle cx="150" cy="60" r="3.5" fill="#0f172a"/>
+                        <path d="M134 70 Q140 75 146 70" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M102 86 L178 86 L186 136 L94 136 Z" fill="#ec4899"/>
+                        <rect x="24" y="132" width="232" height="42" rx="10" fill="#b45309"/>
+                        <polygon points="86,126 194,126 206,158 74,158" fill="#ffffff" stroke="#94a3b8" stroke-width="2.5"/>
+                        <line x1="140" y1="126" x2="140" y2="158" stroke="#cbd5e1" stroke-width="2"/>
+                        <line x1="92" y1="136" x2="130" y2="136" stroke="#38bdf8" stroke-width="2"/>
+                        <line x1="90" y1="145" x2="130" y2="145" stroke="#38bdf8" stroke-width="2"/>
+                        <path d="M174 98 L158 134" stroke="#fde68a" stroke-width="12" stroke-linecap="round"/>
+                        <line x1="154" y1="138" x2="178" y2="104" stroke="#eab308" stroke-width="6" stroke-linecap="round"/>
+                        <polygon points="150,143 153,135 158,139" fill="#0f172a"/>
+                    </svg>`;
+
+                case 'DRINKING':
+                    // Boy holding a clear glass of fresh water and drinking
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#cffafe"/>
+                        <circle cx="135" cy="68" r="30" fill="#fde68a"/>
+                        <path d="M103 60 C105 28, 165 28, 167 60 C155 46, 115 46, 103 60 Z" fill="#1e293b"/>
+                        <circle cx="125" cy="62" r="4" fill="#0f172a"/>
+                        <circle cx="147" cy="62" r="4" fill="#0f172a"/>
+                        <path d="M96 98 L174 98 L184 168 L86 168 Z" fill="#10b981"/>
+                        <g transform="rotate(-24 156 84)">
+                            <rect x="142" y="64" width="28" height="42" rx="4" fill="#ffffff" fill-opacity="0.75" stroke="#0284c7" stroke-width="3"/>
+                            <rect x="144" y="76" width="24" height="28" rx="2" fill="#38bdf8"/>
+                        </g>
+                        <path d="M170 116 L166 90" stroke="#fde68a" stroke-width="13" stroke-linecap="round"/>
+                        <circle cx="164" cy="88" r="9" fill="#fde68a"/>
+                        <path d="M216 48 C216 48, 230 66, 230 76 A14 14 0 1 1 202 76 C202 66, 216 48, 216 48 Z" fill="#0ea5e9"/>
+                    </svg>`;
+
+                case 'SINGING':
+                    // Single kid singing joyfully with microphone ("I am singing.")
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#fef3c7"/>
+                        <rect x="18" y="16" width="66" height="26" rx="9" fill="#d97706"/>
+                        <text x="51" y="34" text-anchor="middle" fill="#ffffff" font-family="Fredoka, sans-serif" font-weight="700" font-size="14">I (Saya)</text>
+                        <text x="48" y="78" fill="#ec4899" font-size="28" font-weight="900">♪</text>
+                        <text x="205" y="52" fill="#8b5cf6" font-size="30" font-weight="900">♫</text>
+                        <text x="225" y="96" fill="#0284c7" font-size="28" font-weight="900">♩</text>
+                        <circle cx="140" cy="68" r="28" fill="#fde68a"/>
+                        <path d="M112 60 C114 30, 166 30, 168 60 Z" fill="#1e293b"/>
+                        <circle cx="130" cy="64" r="3.5" fill="#0f172a"/>
+                        <circle cx="150" cy="64" r="3.5" fill="#0f172a"/>
+                        <ellipse cx="140" cy="78" rx="8" ry="9" fill="#ef4444"/>
+                        <path d="M104 98 L176 98 L186 172 L94 172 Z" fill="#3b82f6"/>
+                        <!-- Hand & Microphone -->
+                        <path d="M168 122 L158 94" stroke="#fde68a" stroke-width="11" stroke-linecap="round"/>
+                        <line x1="158" y1="104" x2="148" y2="82" stroke="#334155" stroke-width="6" stroke-linecap="round"/>
+                        <circle cx="146" cy="78" r="8" fill="#0f172a"/>
+                    </svg>`;
+
+                case 'DANCING':
+                    // Girl in a joyful pose dancing on stage with sparkles and music ("She is dancing.")
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#fce7f3"/>
+                        <ellipse cx="140" cy="166" rx="85" ry="12" fill="#f472b6" opacity="0.35"/>
+                        <text x="42" y="62" fill="#eab308" font-size="26">✨</text>
+                        <text x="214" y="58" fill="#eab308" font-size="26">✨</text>
+                        <text x="206" y="114" fill="#db2777" font-size="24" font-weight="900">♫</text>
+                        <circle cx="140" cy="54" r="22" fill="#fde68a"/>
+                        <path d="M118 48 C120 24, 160 24, 162 48 Z" fill="#1e293b"/>
+                        <circle cx="140" cy="26" r="9" fill="#1e293b"/>
+                        <path d="M130 30 L150 30" stroke="#ec4899" stroke-width="5" stroke-linecap="round"/>
+                        <circle cx="133" cy="52" r="3" fill="#0f172a"/>
+                        <circle cx="147" cy="52" r="3" fill="#0f172a"/>
+                        <path d="M134 61 Q140 67 146 61" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M124 82 Q92 64 84 40" stroke="#fde68a" stroke-width="9" stroke-linecap="round" fill="none"/>
+                        <path d="M156 82 Q188 64 196 40" stroke="#fde68a" stroke-width="9" stroke-linecap="round" fill="none"/>
+                        <path d="M124 76 L156 76 L186 128 Q140 140 94 128 Z" fill="#ec4899"/>
+                        <path d="M132 128 L124 162" stroke="#fde68a" stroke-width="9" stroke-linecap="round"/>
+                        <path d="M148 128 L174 148" stroke="#fde68a" stroke-width="9" stroke-linecap="round"/>
+                        <ellipse cx="122" cy="164" rx="8" ry="5" fill="#be185d"/>
+                        <ellipse cx="176" cy="150" rx="8" ry="5" fill="#be185d"/>
+                    </svg>`;
+
+                case 'SWIMMING':
+                    // Two children swimming happily in a pool ("They are swimming.")
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#bae6fd"/>
+                        <!-- Pool Water Waves -->
+                        <rect x="8" y="96" width="264" height="86" rx="18" fill="#0284c7"/>
+                        <!-- Swimmer 1 (Left) -->
+                        <circle cx="92" cy="78" r="22" fill="#fde68a"/>
+                        <path d="M70 70 C72 48, 112 48, 114 70 Z" fill="#f97316"/>
+                        <rect x="75" y="66" width="14" height="9" rx="4" fill="#38bdf8" stroke="#0f172a" stroke-width="2"/>
+                        <rect x="95" y="66" width="14" height="9" rx="4" fill="#38bdf8" stroke="#0f172a" stroke-width="2"/>
+                        <path d="M85 86 Q92 92 99 86" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M56 102 Q76 82 118 102" stroke="#fde68a" stroke-width="10" stroke-linecap="round" fill="none"/>
+                        <!-- Swimmer 2 (Right) -->
+                        <circle cx="192" cy="78" r="22" fill="#fde68a"/>
+                        <path d="M170 70 C172 48, 212 48, 214 70 Z" fill="#ec4899"/>
+                        <rect x="175" y="66" width="14" height="9" rx="4" fill="#fde047" stroke="#0f172a" stroke-width="2"/>
+                        <rect x="195" y="66" width="14" height="9" rx="4" fill="#fde047" stroke="#0f172a" stroke-width="2"/>
+                        <path d="M185 86 Q192 92 199 86" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M162 102 Q198 82 226 102" stroke="#fde68a" stroke-width="10" stroke-linecap="round" fill="none"/>
+                        <!-- White Water Wave Lines -->
+                        <path d="M24 114 Q52 102 80 114 T136 114 T192 114 T252 114" stroke="#ffffff" stroke-width="4" stroke-linecap="round" fill="none"/>
+                        <path d="M36 144 Q68 132 100 144 T164 144 T236 144" stroke="#7dd3fc" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+                    </svg>`;
+
+                case 'COOKING':
+                    // Girl in chef hat cooking with a pot on the stove ("She is cooking.")
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#ffedd5"/>
+                        <!-- Chef Hat -->
+                        <path d="M112 38 C102 20, 130 14, 140 24 C150 14, 178 20, 168 38 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+                        <rect x="114" y="34" width="52" height="12" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+                        <!-- Girl Head -->
+                        <circle cx="140" cy="68" r="24" fill="#fde68a"/>
+                        <circle cx="114" cy="68" r="8" fill="#1e293b"/>
+                        <circle cx="166" cy="68" r="8" fill="#1e293b"/>
+                        <circle cx="132" cy="66" r="3.5" fill="#0f172a"/>
+                        <circle cx="148" cy="66" r="3.5" fill="#0f172a"/>
+                        <path d="M133 76 Q140 82 147 76" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <!-- Apron & Outfit -->
+                        <path d="M106 94 L174 94 L182 148 L98 148 Z" fill="#f43f5e"/>
+                        <rect x="116" y="98" width="48" height="46" rx="8" fill="#ffffff"/>
+                        <!-- Cooking Pot & Steam -->
+                        <path d="M188 86 Q194 74 188 64" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" fill="none"/>
+                        <path d="M204 84 Q210 72 204 62" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" fill="none"/>
+                        <rect x="168" y="108" width="58" height="36" rx="8" fill="#475569"/>
+                        <line x1="158" y1="114" x2="188" y2="92" stroke="#b45309" stroke-width="5" stroke-linecap="round"/>
+                        <rect x="28" y="144" width="224" height="30" rx="8" fill="#d97706"/>
+                    </svg>`;
+
+                case 'DRAWING':
+                    // Two kids drawing colorful art together ("We are drawing.")
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#f0fdf4"/>
+                        <rect x="18" y="16" width="76" height="26" rx="9" fill="#16a34a"/>
+                        <text x="56" y="34" text-anchor="middle" fill="#ffffff" font-family="Fredoka, sans-serif" font-weight="700" font-size="14">We (Kami)</text>
+                        <!-- Kid 1 (Left) -->
+                        <circle cx="72" cy="82" r="22" fill="#fde68a"/>
+                        <path d="M50 76 C52 52, 92 52, 94 76 Z" fill="#1e293b"/>
+                        <circle cx="65" cy="80" r="3" fill="#0f172a"/>
+                        <circle cx="79" cy="80" r="3" fill="#0f172a"/>
+                        <path d="M66 89 Q72 94 78 89" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <rect x="52" y="104" width="40" height="54" rx="10" fill="#3b82f6"/>
+                        <!-- Kid 2 (Right) -->
+                        <circle cx="212" cy="82" r="22" fill="#fde68a"/>
+                        <path d="M190 76 C192 52, 232 52, 234 76 Z" fill="#451a03"/>
+                        <circle cx="205" cy="80" r="3" fill="#0f172a"/>
+                        <circle cx="219" cy="80" r="3" fill="#0f172a"/>
+                        <path d="M206 89 Q212 94 218 89" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <rect x="192" y="104" width="40" height="54" rx="10" fill="#ec4899"/>
+                        <!-- Center Drawing Canvas Board -->
+                        <rect x="102" y="48" width="78" height="96" rx="8" fill="#ffffff" stroke="#b45309" stroke-width="5"/>
+                        <circle cx="128" cy="74" r="10" fill="#facc15"/>
+                        <path d="M110 130 L132 98 L152 130 Z" fill="#22c55e"/>
+                        <path d="M136 130 L156 104 L172 130 Z" fill="#16a34a"/>
+                        <!-- Crayons / Brushes in hands -->
+                        <line x1="92" y1="112" x2="118" y2="96" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
+                        <line x1="192" y1="112" x2="164" y2="96" stroke="#8b5cf6" stroke-width="6" stroke-linecap="round"/>
+                    </svg>`;
+
+                case 'WALKING':
+                    // Cheerful student walking on a park footpath ("You are walking.")
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#ecfccb"/>
+                        <rect x="18" y="16" width="82" height="26" rx="9" fill="#0284c7"/>
+                        <text x="59" y="34" text-anchor="middle" fill="#ffffff" font-family="Fredoka, sans-serif" font-weight="700" font-size="14">You (Kamu)</text>
+                        <!-- Park Path -->
+                        <rect x="8" y="144" width="264" height="38" rx="12" fill="#d6d3d1"/>
+                        <!-- Walking Kid -->
+                        <circle cx="140" cy="52" r="22" fill="#fde68a"/>
+                        <path d="M118 46 C120 22, 160 22, 162 46 Z" fill="#1e293b"/>
+                        <circle cx="134" cy="50" r="3" fill="#0f172a"/>
+                        <circle cx="148" cy="50" r="3" fill="#0f172a"/>
+                        <path d="M135 59 Q142 64 148 59" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <rect x="122" y="74" width="36" height="44" rx="12" fill="#f97316"/>
+                        <!-- Swing Arms & Walking Legs -->
+                        <line x1="124" y1="84" x2="104" y2="108" stroke="#fde68a" stroke-width="10" stroke-linecap="round"/>
+                        <line x1="156" y1="84" x2="176" y2="104" stroke="#fde68a" stroke-width="10" stroke-linecap="round"/>
+                        <line x1="132" y1="116" x2="116" y2="154" stroke="#1e293b" stroke-width="11" stroke-linecap="round"/>
+                        <line x1="148" y1="116" x2="166" y2="154" stroke="#1e293b" stroke-width="11" stroke-linecap="round"/>
+                        <rect x="106" y="150" width="20" height="9" rx="4" fill="#2563eb"/>
+                        <rect x="160" y="150" width="20" height="9" rx="4" fill="#2563eb"/>
+                    </svg>`;
+
+                case 'JUMPING':
+                    // Kid jumping high in the air with motion bounce lines ("I am jumping.")
+                    return `
+                    <svg class="w-full h-full max-h-[190px]" viewBox="0 0 280 190" fill="none">
+                        <rect x="8" y="8" width="264" height="174" rx="22" fill="#e0e7ff"/>
+                        <rect x="18" y="16" width="66" height="26" rx="9" fill="#4f46e5"/>
+                        <text x="51" y="34" text-anchor="middle" fill="#ffffff" font-family="Fredoka, sans-serif" font-weight="700" font-size="14">I (Saya)</text>
+                        <!-- Ground Shadow & Jump Motion Lines -->
+                        <ellipse cx="140" cy="166" rx="38" ry="8" fill="#94a3b8" opacity="0.5"/>
+                        <path d="M118 156 Q128 134 118 122" stroke="#6366f1" stroke-width="3" stroke-dasharray="4 4" fill="none"/>
+                        <path d="M162 156 Q152 134 162 122" stroke="#6366f1" stroke-width="3" stroke-dasharray="4 4" fill="none"/>
+                        <!-- Jumping Kid High in Air -->
+                        <circle cx="140" cy="44" r="22" fill="#fde68a"/>
+                        <path d="M118 38 C120 16, 160 16, 162 38 Z" fill="#1e293b"/>
+                        <circle cx="133" cy="42" r="3" fill="#0f172a"/>
+                        <circle cx="147" cy="42" r="3" fill="#0f172a"/>
+                        <path d="M133 51 Q140 58 147 51" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+                        <rect x="122" y="66" width="36" height="38" rx="10" fill="#10b981"/>
+                        <!-- Arms Raised High -->
+                        <line x1="124" y1="72" x2="96" y2="42" stroke="#fde68a" stroke-width="10" stroke-linecap="round"/>
+                        <line x1="156" y1="72" x2="184" y2="42" stroke="#fde68a" stroke-width="10" stroke-linecap="round"/>
+                        <!-- Bent Jumping Legs -->
+                        <path d="M130 102 L112 118 L124 132" stroke="#1e293b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <path d="M150 102 L168 118 L156 132" stroke="#1e293b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>`;
+            }
+        }
+
+        const GAME_QUESTIONS = [
+            {
+                id: 1,
+                topic: "READING",
+                correctSentence: "I am reading.",
+                meaningId: "Saya sedang membaca.",
+                requiredWords: ["I", "am", "reading"],
+                distractors: ["is"]
+            },
+            {
+                id: 2,
+                topic: "EATING",
+                correctSentence: "He is eating.",
+                meaningId: "Dia sedang makan.",
+                requiredWords: ["He", "is", "eating"],
+                distractors: ["are"]
+            },
+            {
+                id: 3,
+                topic: "SLEEPING",
+                correctSentence: "She is sleeping.",
+                meaningId: "Dia sedang tidur.",
+                requiredWords: ["She", "is", "sleeping"],
+                distractors: ["are"]
+            },
+            {
+                id: 4,
+                topic: "PLAYING",
+                correctSentence: "They are playing.",
+                meaningId: "Mereka sedang bermain.",
+                requiredWords: ["They", "are", "playing"],
+                distractors: ["is"]
+            },
+            {
+                id: 5,
+                topic: "STUDYING",
+                correctSentence: "We are studying.",
+                meaningId: "Kami sedang belajar.",
+                requiredWords: ["We", "are", "studying"],
+                distractors: ["is"]
+            },
+            {
+                id: 6,
+                topic: "WRITING",
+                correctSentence: "You are writing.",
+                meaningId: "Kamu sedang menulis.",
+                requiredWords: ["You", "are", "writing"],
+                distractors: ["is"]
+            },
+            {
+                id: 7,
+                topic: "RUNNING",
+                correctSentence: "He is running.",
+                meaningId: "Dia sedang berlari.",
+                requiredWords: ["He", "is", "running"],
+                distractors: ["are"]
+            },
+            {
+                id: 8,
+                topic: "SINGING",
+                correctSentence: "I am singing.",
+                meaningId: "Saya sedang bernyanyi.",
+                requiredWords: ["I", "am", "singing"],
+                distractors: ["are"]
+            },
+            {
+                id: 9,
+                topic: "DANCING",
+                correctSentence: "She is dancing.",
+                meaningId: "Dia sedang menari.",
+                requiredWords: ["She", "is", "dancing"],
+                distractors: ["are"]
+            },
+            {
+                id: 10,
+                topic: "SWIMMING",
+                correctSentence: "They are swimming.",
+                meaningId: "Mereka sedang berenang.",
+                requiredWords: ["They", "are", "swimming"],
+                distractors: ["is"]
+            },
+            {
+                id: 11,
+                topic: "COOKING",
+                correctSentence: "She is cooking.",
+                meaningId: "Dia sedang memasak.",
+                requiredWords: ["She", "is", "cooking"],
+                distractors: ["are"]
+            },
+            {
+                id: 12,
+                topic: "DRINKING",
+                correctSentence: "He is drinking.",
+                meaningId: "Dia sedang minum.",
+                requiredWords: ["He", "is", "drinking"],
+                distractors: ["are"]
+            },
+            {
+                id: 13,
+                topic: "DRAWING",
+                correctSentence: "We are drawing.",
+                meaningId: "Kami sedang menggambar.",
+                requiredWords: ["We", "are", "drawing"],
+                distractors: ["is"]
+            },
+            {
+                id: 14,
+                topic: "WALKING",
+                correctSentence: "You are walking.",
+                meaningId: "Kamu sedang berjalan.",
+                requiredWords: ["You", "are", "walking"],
+                distractors: ["is"]
+            },
+            {
+                id: 15,
+                topic: "JUMPING",
+                correctSentence: "I am jumping.",
+                meaningId: "Saya sedang melompat.",
+                requiredWords: ["I", "am", "jumping"],
+                distractors: ["is"]
+            }
+        ];
+
+        // Distinct vibrant colors for flying word pills
+        const WORD_CARD_PALETTES = [
+            { bg: "bg-amber-400", text: "text-slate-900", border: "border-white" },
+            { bg: "bg-emerald-400", text: "text-slate-900", border: "border-white" },
+            { bg: "bg-orange-500", text: "text-white", border: "border-white" },
+            { bg: "bg-sky-500", text: "text-white", border: "border-white" },
+            { bg: "bg-pink-500", text: "text-white", border: "border-white" },
+            { bg: "bg-violet-500", text: "text-white", border: "border-white" }
+        ];
+
+        const gameState = {
+            studentName: "",
+            currentQuestionIndex: 0, // 0 to 14 (Total 15 questions)
+            score: 0,
+            questionScored: new Array(GAME_QUESTIONS.length).fill(false),
+            soundEnabled: true,
+            isCheckingLocked: false,
+            isModalPaused: false,
+            timeLeft: 30,
+            questionTimerId: null,
+            allWords: [],       // Array of word objects for current question
+            sentenceOrder: [],  // Array of word IDs currently inside the Sentence Builder Box
+            selectedWordId: null,
+            animationFrameId: null,
+            autoNextTimeoutId: null
+        };
+
+        // Web Audio API Synthesizer (Safe, zero external audio file dependencies)
+        let audioCtx = null;
+
+        function ensureAudioContext() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(() => {});
+            }
+        }
+
+        function playSoundEffect(type) {
+            if (!gameState.soundEnabled) return;
+            try {
+                ensureAudioContext();
+                if (!audioCtx) return;
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'catch') {
+                    // Pleasant pop-chime when catching a word and landing in the box
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(520, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.14);
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.16);
+                } else if (type === 'remove') {
+                    // Soft descending boop when returning a word to the sky
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(480, now);
+                    osc.frequency.exponentialRampToValueAtTime(280, now + 0.14);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'correct') {
+                    // Cheerful ascending major triad fanfare
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                        gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.25);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.08);
+                        osc.stop(now + idx * 0.08 + 0.26);
+                    });
+                } else if (type === 'wrong') {
+                    // Gentle low double-buzz for wrong/incomplete answer
+                    [220, 196].forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.14);
+                        gain.gain.setValueAtTime(0.12, now + idx * 0.14);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.14 + 0.15);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.14);
+                        osc.stop(now + idx * 0.14 + 0.16);
+                    });
+                } else if (type === 'tick') {
+                    // Subtle countdown tick for last 5 seconds
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(760, now);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.06);
+                } else if (type === 'finish') {
+                    // Grand victory melody when completing all 10 questions
+                    const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50];
+                    const times = [0, 0.1, 0.2, 0.32, 0.46, 0.6];
+                    notes.forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + times[idx]);
+                        gain.gain.setValueAtTime(0.22, now + times[idx]);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + times[idx] + 0.35);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + times[idx]);
+                        osc.stop(now + times[idx] + 0.36);
+                    });
+                }
+            } catch (e) {
+                // Audio failure must never interrupt gameplay
+            }
+        }
+
+        // English Text-to-Speech helper
+        function speakEnglishSentence(text) {
+            if (!gameState.soundEnabled) return;
+            try {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'en-US';
+                    utterance.rate = 0.9;
+                    utterance.pitch = 1.05;
+                    window.speechSynthesis.speak(utterance);
+                }
+            } catch (e) {
+                // Ignore TTS errors so gameplay never breaks
+            }
+        }
+
+        function toggleSoundState() {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            const icon = gameState.soundEnabled ? "🔊" : "🔇";
+            const label = gameState.soundEnabled ? "SOUND: ON" : "SOUND: OFF";
+            document.getElementById('home-sound-icon').textContent = icon;
+            document.getElementById('home-sound-label').textContent = label;
+            document.getElementById('game-sound-icon').textContent = icon;
+            if (!gameState.soundEnabled && 'speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            } else if (gameState.soundEnabled) {
+                playSoundEffect('catch');
+            }
+        }
+
+        const skyArenaEl = document.getElementById('sky-arena');
+        const sentenceBoxEl = document.getElementById('sentence-box');
+
+        function stopSkyAnimation() {
+            if (gameState.animationFrameId) {
+                cancelAnimationFrame(gameState.animationFrameId);
+                gameState.animationFrameId = null;
+            }
+        }
+
+        function clearAutoNextTimer() {
+            if (gameState.autoNextTimeoutId) {
+                clearTimeout(gameState.autoNextTimeoutId);
+                gameState.autoNextTimeoutId = null;
+            }
+        }
+
+        function stopQuestionTimer() {
+            if (gameState.questionTimerId) {
+                clearInterval(gameState.questionTimerId);
+                gameState.questionTimerId = null;
+            }
+        }
+
+        function updateTimerDisplay() {
+            const timerValueEl = document.getElementById('header-timer-value');
+            const timerBadgeEl = document.getElementById('header-timer-badge');
+            if (!timerValueEl || !timerBadgeEl) return;
+
+            timerValueEl.textContent = `${gameState.timeLeft}s`;
+
+            timerBadgeEl.classList.remove(
+                'bg-sky-100', 'border-sky-400', 'text-sky-950',
+                'bg-amber-100', 'border-amber-500', 'text-amber-900',
+                'bg-rose-500', 'border-rose-700', 'text-white', 'animate-pulse'
+            );
+
+            if (gameState.timeLeft <= 5) {
+                timerBadgeEl.classList.add('bg-rose-500', 'border-rose-700', 'text-white', 'animate-pulse');
+            } else if (gameState.timeLeft <= 10) {
+                timerBadgeEl.classList.add('bg-amber-100', 'border-amber-500', 'text-amber-900');
+            } else {
+                timerBadgeEl.classList.add('bg-sky-100', 'border-sky-400', 'text-sky-950');
+            }
+        }
+
+        function startQuestionTimer() {
+            stopQuestionTimer();
+            gameState.timeLeft = 30;
+            updateTimerDisplay();
+
+            gameState.questionTimerId = setInterval(() => {
+                if (gameState.isModalPaused || gameState.isCheckingLocked) return;
+
+                gameState.timeLeft = Math.max(0, gameState.timeLeft - 1);
+                updateTimerDisplay();
+
+                if (gameState.timeLeft <= 5 && gameState.timeLeft > 0) {
+                    playSoundEffect('tick');
+                }
+
+                if (gameState.timeLeft <= 0) {
+                    handleQuestionTimeUp();
+                }
+            }, 1000);
+        }
+
+        function handleQuestionTimeUp() {
+            stopQuestionTimer();
+            if (gameState.isCheckingLocked) return;
+
+            gameState.isCheckingLocked = true;
+            document.getElementById('btn-check-answer').disabled = true;
+            hideInlineFeedback();
+
+            const qIndex = gameState.currentQuestionIndex;
+            const qData = GAME_QUESTIONS[qIndex];
+            const totalQ = GAME_QUESTIONS.length;
+
+            playSoundEffect('wrong');
+            speakEnglishSentence(qData.correctSentence);
+
+            document.getElementById('timeout-sentence-en').textContent = `“${qData.correctSentence}”`;
+            document.getElementById('timeout-sentence-id').textContent = `Arti: ${qData.meaningId}`;
+            document.getElementById('timeout-next-status').textContent = (qIndex < totalQ - 1)
+                ? `Moving to Question ${qIndex + 2} automatically...`
+                : `Completing adventure! Opening Final Results...`;
+
+            document.getElementById('overlay-timeout').classList.remove('hidden');
+
+            clearAutoNextTimer();
+            gameState.autoNextTimeoutId = setTimeout(() => {
+                document.getElementById('overlay-timeout').classList.add('hidden');
+                if (qIndex < totalQ - 1) {
+                    loadQuestion(qIndex + 1);
+                } else {
+                    showFinalResultsScreen();
+                }
+            }, 1500);
+        }
+
+        /**
+         * Resets and starts a fresh 15-question game from Question 1 (index 0)
+         */
+        function startNewGameSession() {
+            stopSkyAnimation();
+            stopQuestionTimer();
+            clearAutoNextTimer();
+
+            gameState.currentQuestionIndex = 0;
+            gameState.score = 0;
+            gameState.questionScored = new Array(GAME_QUESTIONS.length).fill(false);
+            gameState.isCheckingLocked = false;
+            gameState.selectedWordId = null;
+
+            const displayExplorer = gameState.studentName.trim() !== "" 
+                ? `Student: ${gameState.studentName.trim()}` 
+                : "Explorer: Class VI Student";
+            document.getElementById('header-student-name').textContent = displayExplorer;
+
+            showScreen('screen-game');
+            loadQuestion(0);
+        }
+
+        /**
+         * Loads a specific question (0 through 14) cleanly, wiping all previous question objects
+         */
+        function loadQuestion(qIndex) {
+            stopSkyAnimation();
+            stopQuestionTimer();
+            clearAutoNextTimer();
+
+            gameState.currentQuestionIndex = qIndex;
+            gameState.isCheckingLocked = false;
+            gameState.sentenceOrder = [];
+            gameState.selectedWordId = null;
+            gameState.allWords = [];
+
+            // Hide celebration & timeout overlays and inline warning
+            document.getElementById('overlay-correct').classList.add('hidden');
+            document.getElementById('overlay-timeout').classList.add('hidden');
+            hideInlineFeedback();
+            document.getElementById('btn-check-answer').disabled = false;
+
+            const qData = GAME_QUESTIONS[qIndex];
+            const totalQ = GAME_QUESTIONS.length;
+
+            // Update Header Info & Progress Bar
+            document.getElementById('header-question-badge').textContent = `QUESTION ${qIndex + 1} / ${totalQ}`;
+            const completedCount = gameState.questionScored.filter(Boolean).length;
+            const progressPercent = Math.round((completedCount / totalQ) * 100);
+            document.getElementById('header-progress-text').textContent = `${progressPercent}% COMPLETED`;
+            document.getElementById('header-progress-bar').style.width = `${progressPercent}%`;
+            document.getElementById('header-score-value').textContent = String(gameState.score);
+
+            // Update Left Activity Card
+            document.getElementById('activity-topic-tag').textContent = `QUESTION ${qIndex + 1}: ${qData.topic}`;
+            document.getElementById('words-needed-badge').textContent = `Need ${qData.requiredWords.length} Words`;
+            document.getElementById('activity-illustration-box').innerHTML = getActivitySVG(qData.topic);
+            document.getElementById('activity-prompt-hint').textContent = `Arti: "${qData.meaningId}" — Susun kalimat Bahasa Inggrisnya!`;
+
+            // Combine required words + 1 distractor and shuffle them
+            const combinedTextList = [...qData.requiredWords, ...qData.distractors];
+            for (let i = combinedTextList.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [combinedTextList[i], combinedTextList[j]] = [combinedTextList[j], combinedTextList[i]];
+            }
+
+            // Clear Sky Arena DOM
+            skyArenaEl.innerHTML = "";
+
+            // Measure Sky Arena bounds
+            const arenaRect = skyArenaEl.getBoundingClientRect();
+            const arenaW = Math.max(arenaRect.width || 620, 320);
+            const arenaH = Math.max(arenaRect.height || 260, 200);
+
+            // Create interactive flying word entities
+            combinedTextList.forEach((wordText, idx) => {
+                const palette = WORD_CARD_PALETTES[idx % WORD_CARD_PALETTES.length];
+                const wordId = `q${qIndex}_w${idx}`;
+
+                const node = document.createElement('div');
+                node.className = 'flying-word-node';
+                node.dataset.wordId = wordId;
+
+                node.innerHTML = `
+                    <svg class="w-8 h-8 sm:w-10 sm:h-10 -mr-2 wing-left shrink-0" viewBox="0 0 40 36" fill="none">
+                        <path d="M38 18 C24 2, 4 2, 4 14 C4 22, 18 26, 36 22 Z" fill="#ffffff" stroke="#0284c7" stroke-width="2.5"/>
+                        <path d="M36 21 C22 24, 10 34, 18 34 C26 34, 34 28, 38 22 Z" fill="#bae6fd" stroke="#0284c7" stroke-width="2"/>
+                    </svg>
+                    <div class="word-pill-sky ${palette.bg} ${palette.text} ${palette.border} border-3 font-title font-bold text-xl sm:text-2xl md:text-3xl px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl select-none">
+                        ${wordText}
+                    </div>
+                    <svg class="w-8 h-8 sm:w-10 sm:h-10 -ml-2 wing-right shrink-0" viewBox="0 0 40 36" fill="none">
+                        <path d="M2 18 C16 2, 36 2, 36 14 C36 22, 22 26, 4 22 Z" fill="#ffffff" stroke="#0284c7" stroke-width="2.5"/>
+                        <path d="M4 21 C18 24, 30 34, 22 34 C14 34, 6 28, 2 22 Z" fill="#bae6fd" stroke="#0284c7" stroke-width="2"/>
+                    </svg>
+                `;
+
+                // Catch word on pointerdown (works instantaneously on touch Smart Boards & mouse)
+                node.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    catchWordFromSky(wordId);
+                });
+
+                skyArenaEl.appendChild(node);
+
+                // Measure rendered size for accurate boundary physics
+                const nodeRect = node.getBoundingClientRect();
+                const w = nodeRect.width || 150;
+                const h = nodeRect.height || 62;
+
+                // Spread initial positions across grid cells
+                const cols = 2;
+                const col = idx % cols;
+                const row = Math.floor(idx / cols);
+                const cellW = Math.max((arenaW - w - 24) / cols, 80);
+                const cellH = Math.max((arenaH - h - 24) / 2, 50);
+
+                const startX = Math.min(Math.max(16 + col * cellW + Math.random() * 40, 12), Math.max(arenaW - w - 12, 16));
+                const startY = Math.min(Math.max(14 + row * cellH + Math.random() * 28, 10), Math.max(arenaH - h - 12, 14));
+
+                // Fast flying speed as requested ("terbangnya itu cepat")
+                const speed = 3.2 + Math.random() * 1.3;
+                const angle = (idx * (Math.PI * 2 / combinedTextList.length)) + 0.45;
+
+                const wordObj = {
+                    id: wordId,
+                    text: wordText,
+                    caught: false,
+                    x: startX,
+                    y: startY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    width: w,
+                    height: h,
+                    el: node
+                };
+
+                node.style.transform = `translate3d(${wordObj.x}px, ${wordObj.y}px, 0)`;
+                gameState.allWords.push(wordObj);
+            });
+
+            renderSentenceBox();
+            updateSkyCounter();
+            startSkyAnimationLoop();
+            startQuestionTimer();
+        }
+
+        /**
+         * Animates only the uncaught words in the sky arena with fast velocity & brisk boundary bounce
+         */
+        function startSkyAnimationLoop() {
+            stopSkyAnimation();
+
+            function step() {
+                if (!gameState.isModalPaused && !gameState.isCheckingLocked) {
+                    const rect = skyArenaEl.getBoundingClientRect();
+                    const maxW = rect.width || 600;
+                    const maxH = rect.height || 250;
+
+                    const activeWords = gameState.allWords.filter(w => !w.caught);
+
+                    // Mutual repulsion so fast flying words bounce off each other smoothly
+                    for (let i = 0; i < activeWords.length; i++) {
+                        for (let j = i + 1; j < activeWords.length; j++) {
+                            const a = activeWords[i];
+                            const b = activeWords[j];
+                            const cxA = a.x + a.width / 2;
+                            const cyA = a.y + a.height / 2;
+                            const cxB = b.x + b.width / 2;
+                            const cyB = b.y + b.height / 2;
+
+                            const dx = cxB - cxA;
+                            const dy = cyB - cyA;
+                            const minDistX = (a.width + b.width) * 0.46;
+                            const minDistY = (a.height + b.height) * 0.52;
+
+                            if (Math.abs(dx) < minDistX && Math.abs(dy) < minDistY) {
+                                const pushX = (dx >= 0 ? 1 : -1) * 0.18;
+                                const pushY = (dy >= 0 ? 1 : -1) * 0.18;
+                                a.vx -= pushX;
+                                a.vy -= pushY;
+                                b.vx += pushX;
+                                b.vy += pushY;
+                            }
+                        }
+                    }
+
+                    activeWords.forEach(w => {
+                        // Maintain fast flying speed range
+                        const maxSpeed = 4.6;
+                        const minSpeed = 2.8;
+                        const currentSpeed = Math.hypot(w.vx, w.vy) || 3.2;
+                        if (currentSpeed > maxSpeed) {
+                            w.vx = (w.vx / currentSpeed) * maxSpeed;
+                            w.vy = (w.vy / currentSpeed) * maxSpeed;
+                        } else if (currentSpeed < minSpeed) {
+                            w.vx = (w.vx / currentSpeed) * minSpeed;
+                            w.vy = (w.vy / currentSpeed) * minSpeed;
+                        }
+
+                        w.x += w.vx;
+                        w.y += w.vy;
+
+                        const pad = 8;
+                        const rightLimit = Math.max(maxW - w.width - pad, pad);
+                        const bottomLimit = Math.max(maxH - w.height - pad, pad);
+
+                        if (w.x <= pad) {
+                            w.x = pad;
+                            w.vx = Math.abs(w.vx);
+                        } else if (w.x >= rightLimit) {
+                            w.x = rightLimit;
+                            w.vx = -Math.abs(w.vx);
+                        }
+
+                        if (w.y <= pad) {
+                            w.y = pad;
+                            w.vy = Math.abs(w.vy);
+                        } else if (w.y >= bottomLimit) {
+                            w.y = bottomLimit;
+                            w.vy = -Math.abs(w.vy);
+                        }
+
+                        w.el.style.transform = `translate3d(${w.x.toFixed(1)}px, ${w.y.toFixed(1)}px, 0)`;
+                    });
+                }
+
+                gameState.animationFrameId = requestAnimationFrame(step);
+            }
+
+            gameState.animationFrameId = requestAnimationFrame(step);
+        }
+
+        function updateSkyCounter() {
+            const flyingCount = gameState.allWords.filter(w => !w.caught).length;
+            document.getElementById('sky-remaining-counter').textContent = `Flying Words: ${flyingCount}`;
+        }
+
+        /**
+         * Catches a word from the sky: stops its movement, hides it from the sky arena,
+         * and adds it as a static wingless card into the Sentence Builder Box.
+         */
+        function catchWordFromSky(wordId) {
+            if (gameState.isCheckingLocked) return;
+
+            const wordObj = gameState.allWords.find(w => w.id === wordId);
+            if (!wordObj || wordObj.caught) return; // Cannot catch an already caught word
+
+            wordObj.caught = true;
+            // Immediately remove from sky view so it cannot be clicked again or keep flying
+            wordObj.el.classList.add('hidden');
+            wordObj.el.style.pointerEvents = 'none';
+
+            gameState.sentenceOrder.push(wordId);
+            gameState.selectedWordId = wordId;
+
+            hideInlineFeedback();
+            playSoundEffect('catch');
+            renderSentenceBox();
+            updateSkyCounter();
+        }
+
+        /**
+         * Returns a single word from the Sentence Builder Box back to the sky arena with wings active
+         */
+        function returnWordToSky(wordId) {
+            if (gameState.isCheckingLocked) return;
+
+            const idx = gameState.sentenceOrder.indexOf(wordId);
+            if (idx === -1) return;
+
+            gameState.sentenceOrder.splice(idx, 1);
+
+            const wordObj = gameState.allWords.find(w => w.id === wordId);
+            if (wordObj) {
+                wordObj.caught = false;
+                wordObj.el.classList.remove('hidden');
+                wordObj.el.style.pointerEvents = 'auto';
+            }
+
+            if (gameState.selectedWordId === wordId) {
+                gameState.selectedWordId = gameState.sentenceOrder.length > 0
+                    ? gameState.sentenceOrder[gameState.sentenceOrder.length - 1]
+                    : null;
+            }
+
+            hideInlineFeedback();
+            playSoundEffect('remove');
+            renderSentenceBox();
+            updateSkyCounter();
+        }
+
+        /**
+         * Clears all caught words from the Sentence Builder Box and returns them to the sky
+         */
+        function clearAllSentenceWords() {
+            if (gameState.isCheckingLocked || gameState.sentenceOrder.length === 0) return;
+
+            gameState.sentenceOrder.forEach(wordId => {
+                const wordObj = gameState.allWords.find(w => w.id === wordId);
+                if (wordObj) {
+                    wordObj.caught = false;
+                    wordObj.el.classList.remove('hidden');
+                    wordObj.el.style.pointerEvents = 'auto';
+                }
+            });
+
+            gameState.sentenceOrder = [];
+            gameState.selectedWordId = null;
+
+            hideInlineFeedback();
+            playSoundEffect('remove');
+            renderSentenceBox();
+            updateSkyCounter();
+        }
+
+        /**
+         * Renders the caught words inside the Sentence Builder Box as completely static cards (NO WINGS, NO FLYING)
+         */
+        function renderSentenceBox() {
+            sentenceBoxEl.innerHTML = "";
+
+            if (gameState.sentenceOrder.length === 0) {
+                const placeholder = document.createElement('div');
+                placeholder.className = "w-full text-center text-sky-700/75 font-extrabold text-base sm:text-xl py-2 pointer-events-none";
+                placeholder.textContent = "👆 Catch the flying words above to build your sentence here!";
+                sentenceBoxEl.appendChild(placeholder);
+            } else {
+                gameState.sentenceOrder.forEach((wordId, index) => {
+                    const wordObj = gameState.allWords.find(w => w.id === wordId);
+                    if (!wordObj) return;
+
+                    const isSelected = gameState.selectedWordId === wordId;
+
+                    // Static card: zero wings, zero movement animation
+                    const card = document.createElement('div');
+                    card.className = `static-sentence-card bg-white border-3 border-slate-300 rounded-2xl px-4 sm:px-5 py-2 sm:py-2.5 flex items-center gap-2 ${isSelected ? 'selected-card' : ''}`;
+                    card.dataset.wordId = wordId;
+                    card.dataset.slotIndex = String(index);
+
+                    // Order badge + static word text
+                    const textSpan = document.createElement('span');
+                    textSpan.className = "font-title font-bold text-xl sm:text-2xl md:text-3xl text-slate-900 pointer-events-none";
+                    textSpan.textContent = wordObj.text;
+
+                    card.appendChild(textSpan);
+
+                    // Attach Pointer Events for Smart Board Touch & Mouse Drag-and-Drop + Tap-to-Swap/Select
+                    attachSentenceCardPointerEvents(card, wordId, index);
+
+                    sentenceBoxEl.appendChild(card);
+                });
+            }
+
+            // Update live preview text & buttons
+            const builtWords = gameState.sentenceOrder
+                .map(id => gameState.allWords.find(w => w.id === id)?.text || "")
+                .filter(Boolean);
+
+            const previewContainer = document.getElementById('sentence-preview-text');
+            if (builtWords.length > 0) {
+                previewContainer.innerHTML = `Sentence: <span class="text-sky-900 font-black">“${builtWords.join(' ')}.”</span>`;
+            } else {
+                previewContainer.innerHTML = `Sentence: <span class="text-slate-400 font-bold">...</span>`;
+            }
+
+            document.getElementById('btn-remove-word').disabled = gameState.sentenceOrder.length === 0;
+            document.getElementById('btn-clear-all').disabled = gameState.sentenceOrder.length === 0;
+        }
+
+        // Pointer-based Drag-and-Drop + Tap-to-Swap State for Sentence Box Cards
+        let dragState = null;
+
+        function attachSentenceCardPointerEvents(cardEl, wordId, slotIndex) {
+            cardEl.addEventListener('pointerdown', (e) => {
+                if (gameState.isCheckingLocked) return;
+                e.preventDefault();
+                e.stopPropagation();
+
+                const startX = e.clientX;
+                const startY = e.clientY;
+
+                dragState = {
+                    wordId,
+                    fromIndex: slotIndex,
+                    startX,
+                    startY,
+                    isDragging: false,
+                    ghostEl: null,
+                    sourceEl: cardEl,
+                    hoveredIndex: null
+                };
+
+                cardEl.setPointerCapture(e.pointerId);
+            });
+
+            cardEl.addEventListener('pointermove', (e) => {
+                if (!dragState || dragState.wordId !== wordId) return;
+
+                const dx = e.clientX - dragState.startX;
+                const dy = e.clientY - dragState.startY;
+
+                if (!dragState.isDragging && Math.hypot(dx, dy) > 8) {
+                    dragState.isDragging = true;
+                    dragState.sourceEl.classList.add('dragging-source');
+
+                    // Create floating ghost card for visual feedback on Smart Board
+                    const wordObj = gameState.allWords.find(w => w.id === wordId);
+                    const ghost = document.createElement('div');
+                    ghost.id = 'drag-ghost-card';
+                    ghost.className = 'bg-amber-100 border-3 border-orange-500 rounded-2xl px-5 py-2.5 font-title font-bold text-2xl sm:text-3xl text-slate-900';
+                    ghost.textContent = wordObj ? wordObj.text : '';
+                    document.body.appendChild(ghost);
+                    dragState.ghostEl = ghost;
+                }
+
+                if (dragState.isDragging && dragState.ghostEl) {
+                    dragState.ghostEl.style.left = `${e.clientX}px`;
+                    dragState.ghostEl.style.top = `${e.clientY}px`;
+
+                    // Highlight target card under pointer
+                    const allCards = Array.from(sentenceBoxEl.querySelectorAll('.static-sentence-card'));
+                    dragState.hoveredIndex = null;
+
+                    allCards.forEach((c, idx) => {
+                        c.classList.remove('drag-over-target');
+                        const r = c.getBoundingClientRect();
+                        if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+                            if (idx !== dragState.fromIndex) {
+                                c.classList.add('drag-over-target');
+                                dragState.hoveredIndex = idx;
+                            }
+                        }
+                    });
+                }
+            });
+
+            const finishPointerInteraction = (e) => {
+                if (!dragState || dragState.wordId !== wordId) return;
+
+                if (dragState.ghostEl) {
+                    dragState.ghostEl.remove();
+                }
+
+                const wasDragging = dragState.isDragging;
+                const fromIdx = dragState.fromIndex;
+                let targetIdx = dragState.hoveredIndex;
+
+                // If dropped inside the sentence box but between cards, calculate nearest insertion index
+                if (wasDragging && targetIdx === null) {
+                    const boxRect = sentenceBoxEl.getBoundingClientRect();
+                    if (e.clientY >= boxRect.top - 30 && e.clientY <= boxRect.bottom + 30) {
+                        const allCards = Array.from(sentenceBoxEl.querySelectorAll('.static-sentence-card'));
+                        let insertPos = allCards.length - 1;
+                        for (let i = 0; i < allCards.length; i++) {
+                            const r = allCards[i].getBoundingClientRect();
+                            if (e.clientX < r.left + r.width / 2) {
+                                insertPos = i;
+                                break;
+                            }
+                        }
+                        targetIdx = insertPos;
+                    }
+                }
+
+                dragState = null;
+
+                if (wasDragging) {
+                    if (targetIdx !== null && targetIdx !== fromIdx && targetIdx >= 0 && targetIdx < gameState.sentenceOrder.length) {
+                        const movedId = gameState.sentenceOrder.splice(fromIdx, 1)[0];
+                        gameState.sentenceOrder.splice(targetIdx, 0, movedId);
+                        gameState.selectedWordId = movedId;
+                        hideInlineFeedback();
+                        playSoundEffect('catch');
+                    }
+                    renderSentenceBox();
+                } else {
+                    // Simple Tap / Click on a card in the Sentence Builder Box:
+                    // If another card was already selected, swap their positions! Otherwise select/deselect it.
+                    if (gameState.selectedWordId && gameState.selectedWordId !== wordId) {
+                        const prevIdx = gameState.sentenceOrder.indexOf(gameState.selectedWordId);
+                        const currIdx = gameState.sentenceOrder.indexOf(wordId);
+                        if (prevIdx !== -1 && currIdx !== -1) {
+                            // Swap the two tapped cards for effortless Smart Board reordering
+                            const temp = gameState.sentenceOrder[prevIdx];
+                            gameState.sentenceOrder[prevIdx] = gameState.sentenceOrder[currIdx];
+                            gameState.sentenceOrder[currIdx] = temp;
+                            gameState.selectedWordId = wordId;
+                            hideInlineFeedback();
+                            playSoundEffect('catch');
+                            renderSentenceBox();
+                            return;
+                        }
+                    }
+                    // Toggle selection on this card
+                    gameState.selectedWordId = (gameState.selectedWordId === wordId) ? null : wordId;
+                    renderSentenceBox();
+                }
+            };
+
+            cardEl.addEventListener('pointerup', finishPointerInteraction);
+            cardEl.addEventListener('pointercancel', finishPointerInteraction);
+        }
+
+        function showInlineFeedback(message, type) {
+            const banner = document.getElementById('inline-feedback-banner');
+            const textEl = document.getElementById('inline-feedback-text');
+            banner.classList.remove('hidden', 'bg-rose-100', 'text-rose-800', 'border-rose-300', 'bg-amber-100', 'text-amber-900', 'border-amber-300');
+            banner.classList.add('inline-flex', 'border-2');
+
+            if (type === 'incomplete') {
+                banner.classList.add('bg-amber-100', 'text-amber-900', 'border-amber-300');
+            } else {
+                banner.classList.add('bg-rose-100', 'text-rose-800', 'border-rose-300');
+            }
+
+            textEl.textContent = message;
+
+            // Gentle shake on Sentence Builder Panel
+            const panel = document.getElementById('sentence-builder-panel');
+            panel.classList.remove('shake-box');
+            void panel.offsetWidth;
+            panel.classList.add('shake-box');
+        }
+
+        function hideInlineFeedback() {
+            const banner = document.getElementById('inline-feedback-banner');
+            banner.classList.add('hidden');
+            banner.classList.remove('inline-flex');
+        }
+
+        /**
+         * Verifies the student's arranged words against the current question's target sequence
+         */
+        function checkCurrentAnswer() {
+            if (gameState.isCheckingLocked) return;
+
+            const qIndex = gameState.currentQuestionIndex;
+            const qData = GAME_QUESTIONS[qIndex];
+            const arrangedWords = gameState.sentenceOrder
+                .map(id => gameState.allWords.find(w => w.id === id)?.text || "")
+                .filter(Boolean);
+
+            // 1. Check if words are incomplete (fewer words caught than required)
+            if (arrangedWords.length < qData.requiredWords.length) {
+                playSoundEffect('wrong');
+                showInlineFeedback("⚠️ CATCH ALL THE WORDS YOU NEED!", 'incomplete');
+                return;
+            }
+
+            // 2. Compare exact word sequence
+            const isExactMatch = arrangedWords.length === qData.requiredWords.length &&
+                arrangedWords.every((word, idx) => word === qData.requiredWords[idx]);
+
+            if (!isExactMatch) {
+                // Wrong Answer: Stay on same question, do not show answer, allow student to fix arrangement
+                playSoundEffect('wrong');
+                showInlineFeedback("❌ NOT QUITE! TRY AGAIN!", 'wrong');
+                return;
+            }
+
+            // 3. Correct Answer! Lock checking immediately to prevent duplicate scoring or double transitions
+            gameState.isCheckingLocked = true;
+            stopQuestionTimer();
+            document.getElementById('btn-check-answer').disabled = true;
+            hideInlineFeedback();
+
+            const totalQ = GAME_QUESTIONS.length;
+            const maxPossibleScore = totalQ * 10;
+
+            // Award 10 points strictly once per question
+            if (!gameState.questionScored[qIndex]) {
+                gameState.questionScored[qIndex] = true;
+                gameState.score = Math.min(gameState.score + 10, maxPossibleScore);
+            }
+
+            // Update Header Score & Progress Bar immediately
+            document.getElementById('header-score-value').textContent = String(gameState.score);
+            const completedCount = gameState.questionScored.filter(Boolean).length;
+            const progressPercent = Math.round((completedCount / totalQ) * 100);
+            document.getElementById('header-progress-text').textContent = `${progressPercent}% COMPLETED`;
+            document.getElementById('header-progress-bar').style.width = `${progressPercent}%`;
+
+            // Play victory sound and pronounce the English sentence
+            playSoundEffect('correct');
+            speakEnglishSentence(qData.correctSentence);
+
+            // Populate and display the brief Correct Celebration Overlay
+            document.getElementById('correct-sentence-en').textContent = `“${qData.correctSentence}”`;
+            document.getElementById('correct-sentence-id').textContent = `Arti: ${qData.meaningId}`;
+            document.getElementById('correct-next-status').textContent = (qIndex < totalQ - 1)
+                ? `Moving to Question ${qIndex + 2} automatically...`
+                : `Completing adventure! Opening Final Results...`;
+
+            document.getElementById('overlay-correct').classList.remove('hidden');
+
+            // Wait ~1.15 seconds and automatically transition to the next question (or Final Results after Q15)
+            clearAutoNextTimer();
+            gameState.autoNextTimeoutId = setTimeout(() => {
+                document.getElementById('overlay-correct').classList.add('hidden');
+                if (qIndex < totalQ - 1) {
+                    loadQuestion(qIndex + 1);
+                } else {
+                    showFinalResultsScreen();
+                }
+            }, 1150);
+        }
+
+        function showFinalResultsScreen() {
+            stopSkyAnimation();
+            stopQuestionTimer();
+            clearAutoNextTimer();
+            playSoundEffect('finish');
+
+            const totalQ = GAME_QUESTIONS.length;
+            const finalScore = gameState.score;
+            const solvedCount = gameState.questionScored.filter(Boolean).length;
+            const normalized100 = Math.round((solvedCount / totalQ) * 100);
+
+            const explorerText = gameState.studentName.trim() !== ""
+                ? `Explorer: ${gameState.studentName.trim()}`
+                : "Explorer: Class VI Star Student";
+
+            document.getElementById('result-student-name').textContent = explorerText;
+            document.getElementById('result-total-questions').textContent = String(totalQ);
+            document.getElementById('result-solved-questions').textContent = String(solvedCount);
+            document.getElementById('result-final-score').textContent = String(finalScore);
+            document.getElementById('result-score-100').textContent = `Nilai Akhir: ${normalized100} / 100`;
+
+            let badgeIcon = "👑";
+            let badgeTitle = "English Master";
+            let msgEn = "“Fantastic! You are an English Master!”";
+            let msgId = `“Hebat sekali! Kamu berhasil menyusun ke-${totalQ} kalimat Bahasa Inggris dengan sempurna!”`;
+
+            if (normalized100 >= 90) {
+                badgeIcon = "👑";
+                badgeTitle = "English Master";
+                msgEn = "“Fantastic! You are an English Master!”";
+                msgId = `“Hebat sekali! Kamu berhasil menyusun ke-${totalQ} kalimat Bahasa Inggris dengan sempurna!”`;
+            } else if (normalized100 >= 70) {
+                badgeIcon = "🌟";
+                badgeTitle = "Sentence Builder";
+                msgEn = "“Fantastic! You are a Sentence Builder!”";
+                msgId = "“Hebat! Kamu berhasil menyusun kalimat Bahasa Inggris dengan baik!”";
+            } else {
+                badgeIcon = "🛡️";
+                badgeTitle = "Brave Learner";
+                msgEn = "“Great effort! You are a Brave Learner!”";
+                msgId = "“Tetap semangat! Terus berlatih menyusun kalimat Bahasa Inggris!”";
+            }
+
+            document.getElementById('result-badge-icon').textContent = badgeIcon;
+            document.getElementById('result-badge-title').textContent = badgeTitle;
+            document.getElementById('result-message-en').textContent = msgEn;
+            document.getElementById('result-message-id').textContent = msgId;
+
+            showScreen('screen-results');
+        }
+
+        function populateReviewModal() {
+            const listEl = document.getElementById('review-sentences-list');
+            listEl.innerHTML = "";
+
+            GAME_QUESTIONS.forEach((q, idx) => {
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between bg-sky-50 border-2 border-sky-200 rounded-2xl p-3.5";
+                item.innerHTML = `
+                    <div>
+                        <span class="text-xs font-black bg-sky-600 text-white px-2.5 py-0.5 rounded-full">Q${idx + 1} • ${q.topic}</span>
+                        <div class="font-title font-bold text-lg sm:text-xl text-sky-950 mt-1">${q.correctSentence}</div>
+                        <div class="text-xs sm:text-sm font-bold text-slate-600">${q.meaningId}</div>
+                    </div>
+                    <button type="button" class="btn-game bg-sky-500 text-white px-3.5 py-2 rounded-xl font-bold text-sm shrink-0">
+                        🔊 Listen
+                    </button>
+                `;
+                const btn = item.querySelector('button');
+                btn.addEventListener('click', () => speakEnglishSentence(q.correctSentence));
+                listEl.appendChild(item);
+            });
+        }
+
+        function showScreen(screenId) {
+            ['screen-home', 'screen-game', 'screen-results'].forEach(id => {
+                const el = document.getElementById(id);
+                if (id === screenId) {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+        }
+
+        function openModal(modalId) {
+            gameState.isModalPaused = true;
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+            // Resume sky animation if no other modal is open
+            const anyOpen = ['modal-name', 'modal-how-to-play', 'modal-material', 'modal-review']
+                .some(id => !document.getElementById(id).classList.contains('hidden'));
+            gameState.isModalPaused = anyOpen;
+        }
+
+        window.onload = function () {
+            populateReviewModal();
+
+            // Home Screen Buttons
+            document.getElementById('btn-play-now').addEventListener('click', () => {
+                openModal('modal-name');
+                setTimeout(() => document.getElementById('input-student-name').focus(), 80);
+            });
+
+            document.getElementById('btn-cancel-name').addEventListener('click', () => {
+                closeModal('modal-name');
+            });
+
+            document.getElementById('btn-start-game').addEventListener('click', () => {
+                gameState.studentName = document.getElementById('input-student-name').value || "";
+                closeModal('modal-name');
+                startNewGameSession();
+            });
+
+            document.getElementById('input-student-name').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    gameState.studentName = document.getElementById('input-student-name').value || "";
+                    closeModal('modal-name');
+                    startNewGameSession();
+                }
+            });
+
+            document.getElementById('btn-how-to-play').addEventListener('click', () => {
+                openModal('modal-how-to-play');
+            });
+
+            document.getElementById('btn-home-material').addEventListener('click', () => {
+                openModal('modal-material');
+            });
+
+            document.getElementById('btn-game-material').addEventListener('click', () => {
+                openModal('modal-material');
+            });
+
+            document.getElementById('btn-home-sound').addEventListener('click', toggleSoundState);
+            document.getElementById('btn-game-sound').addEventListener('click', toggleSoundState);
+
+            // Close modal triggers
+            document.querySelectorAll('[data-close-modal]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    closeModal(btn.getAttribute('data-close-modal'));
+                });
+            });
+
+            // Speak buttons inside Learning Material modal
+            document.querySelectorAll('[data-speak]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    speakEnglishSentence(btn.getAttribute('data-speak'));
+                });
+            });
+
+            // Speak button on Correct Celebration overlay
+            document.getElementById('btn-speak-correct').addEventListener('click', () => {
+                const qData = GAME_QUESTIONS[gameState.currentQuestionIndex];
+                if (qData) speakEnglishSentence(qData.correctSentence);
+            });
+
+            // Game Header Home Button
+            document.getElementById('btn-game-home').addEventListener('click', () => {
+                stopSkyAnimation();
+                stopQuestionTimer();
+                clearAutoNextTimer();
+                showScreen('screen-home');
+            });
+
+            // Sentence Builder Controls
+            document.getElementById('btn-remove-word').addEventListener('click', () => {
+                if (gameState.sentenceOrder.length === 0) return;
+                const targetId = (gameState.selectedWordId && gameState.sentenceOrder.includes(gameState.selectedWordId))
+                    ? gameState.selectedWordId
+                    : gameState.sentenceOrder[gameState.sentenceOrder.length - 1];
+                returnWordToSky(targetId);
+            });
+
+            document.getElementById('btn-clear-all').addEventListener('click', clearAllSentenceWords);
+            document.getElementById('btn-check-answer').addEventListener('click', checkCurrentAnswer);
+
+            // Final Results Screen Buttons
+            document.getElementById('btn-play-again').addEventListener('click', () => {
+                startNewGameSession();
+            });
+
+            document.getElementById('btn-review-sentences').addEventListener('click', () => {
+                openModal('modal-review');
+            });
+
+            document.getElementById('btn-results-home').addEventListener('click', () => {
+                stopSkyAnimation();
+                stopQuestionTimer();
+                clearAutoNextTimer();
+                showScreen('screen-home');
+            });
+
+            // Keep flying words inside the Sky Arena when window or Smart Board resolution resizes
+            window.addEventListener('resize', () => {
+                const rect = skyArenaEl.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+                gameState.allWords.forEach(w => {
+                    w.x = Math.min(Math.max(w.x, 8), Math.max(rect.width - w.width - 8, 8));
+                    w.y = Math.min(Math.max(w.y, 8), Math.max(rect.height - w.height - 8, 8));
+                });
+            });
+        };
+    </script>
+</body>
+</html>
